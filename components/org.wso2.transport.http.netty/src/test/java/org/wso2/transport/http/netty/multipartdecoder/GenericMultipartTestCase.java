@@ -1,20 +1,4 @@
-/*
-*  Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
-*
-*  WSO2 Inc. licenses this file to you under the Apache License,
-*  Version 2.0 (the "License"); you may not use this file except
-*  in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*    http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing,
-*  software distributed under the License is distributed on an
-*  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-*  KIND, either express or implied.  See the License for the
-*  specific language governing permissions and limitations
-*  under the License.
-*/
+package org.wso2.transport.http.netty.multipartdecoder;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -29,7 +13,6 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
-import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -39,20 +22,17 @@ import org.wso2.transport.http.netty.config.ChunkConfig;
 import org.wso2.transport.http.netty.contractimpl.HttpWsServerConnectorFuture;
 import org.wso2.transport.http.netty.listener.SourceHandler;
 import org.wso2.transport.http.netty.message.HttpBodyPart;
-import org.wso2.transport.http.netty.multipartdecoder.MultipartContentListener;
-import org.wso2.transport.http.netty.multipartdecoder.MultipartTestUtil;
+import org.wso2.transport.http.netty.message.multipart.GenericMultipartEncoder;
 
 import java.util.List;
 
-/**
- * Test cases for multipart handling.
- */
-public class MultipartTestCase {
+public class GenericMultipartTestCase {
+
     private static final String jsonContent = "{key:value, key2:value2}";
     private final HttpDataFactory dataFactory = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
     private EmbeddedChannel channel;
     private HttpWsServerConnectorFuture httpWsServerConnectorFuture = new HttpWsServerConnectorFuture();
-    private MultipartContentListener listener;
+    private GenericMultipartContentListener listener;
 
     @BeforeClass
     public void setup() throws Exception {
@@ -60,15 +40,16 @@ public class MultipartTestCase {
         channel.pipeline().addLast(new HttpResponseDecoder());
         channel.pipeline().addLast(new HttpRequestEncoder());
         channel.pipeline().addLast(new SourceHandler(httpWsServerConnectorFuture, null, ChunkConfig.ALWAYS));
-        listener = new MultipartContentListener();
+        listener = new GenericMultipartContentListener();
         httpWsServerConnectorFuture.setHttpConnectorListener(listener);
     }
 
-    @Test(description = "Test whether the received multipart request can be decoded properly")
-    public void testMultipartRequest() throws Exception {
+
+    @Test(description = "Test whether multipart/mixed can be decoded properly")
+    public void testMultipartMixed() throws Exception {
         HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
-        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(dataFactory, request, true);
-        request.headers().add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.MULTIPART_FORM_DATA);
+        GenericMultipartEncoder encoder = new GenericMultipartEncoder(dataFactory, request, true);
+        request.headers().add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.MULTIPART_MIXED);
         encoder.addBodyHttpData(MultipartTestUtil.createJSONAttribute(request, jsonContent, dataFactory));
         encoder.addBodyHttpData(MultipartTestUtil.createFileUpload(request, dataFactory));
         request = encoder.finalizeRequest();
@@ -85,26 +66,12 @@ public class MultipartTestCase {
         listener.clearBodyParts();
     }
 
-    @Test(description = "Test sending a bogus request posing as a multipart without an actual multipart body")
-    public void testMultipartRequestWithoutBody() throws Exception {
+    @Test(description = "Test whether multipart/form-data can be decoded properly")
+    public void testMultipartFormData() throws Exception {
         HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
-        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(dataFactory, request, true);
-        request = encoder.finalizeRequest();
         request.headers().add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.MULTIPART_FORM_DATA);
-        sendMultipartRequest(request, encoder);
-
-        boolean isMultipart = listener.isMultipart();
-        Assert.assertEquals(isMultipart, false);
-        List<HttpBodyPart> httpBodyParts = listener.getMultiparts();
-        Assert.assertNull(httpBodyParts, "Received http body parts are null");
-        listener.clearBodyParts();
-    }
-
-    @Test(description = "Test whether the received multipart request can be decoded properly")
-    public void testMixed() throws Exception {
-        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
-        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(dataFactory, request, true);
-        request.headers().add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.MULTIPART_MIXED);
+        GenericMultipartEncoder encoder = new GenericMultipartEncoder(dataFactory, request, true);
+        encoder.addBodyHttpData(MultipartTestUtil.createJSONAttribute(request, jsonContent, dataFactory));
         encoder.addBodyHttpData(MultipartTestUtil.createFileUpload(request, dataFactory));
         request = encoder.finalizeRequest();
         sendMultipartRequest(request, encoder);
@@ -120,14 +87,58 @@ public class MultipartTestCase {
         listener.clearBodyParts();
     }
 
-    /**
-     * Write multipart request to inbound channel.
-     *
-     * @param request Represent a HttpRequest
-     * @param encoder Represent netty HttpPostRequestEncoder
-     * @throws Exception
-     */
-    private void sendMultipartRequest(HttpRequest request, HttpPostRequestEncoder encoder) throws Exception {
+
+   @Test(description = "Test whether multipart/form-data can be decoded properly")
+   public void highLevelTestForMultipartFormData() throws Exception {
+       HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+       request.headers().add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.MULTIPART_FORM_DATA);
+       /*GenericMultipartEncoder encoder = new GenericMultipartEncoder(dataFactory, request, true);
+       encoder.addBodyHttpData(MultipartTestUtil.createJSONAttribute(request, jsonContent, dataFactory));
+       encoder.addBodyHttpData(MultipartTestUtil.createFileUpload(request, dataFactory));*/
+       GenericMultipartEncoder encoder = new GenericMultipartEncoder(request, true);
+       encoder.addBodyAttribute("foo", "bar");
+       encoder.addBodyFileUpload("file", MultipartTestUtil.getFileToUpload(), "text/plain", false);
+       encoder.addBodyFileUpload("file", MultipartTestUtil.getFileToUpload(), "text/plain", false);
+       request = encoder.finalizeRequest();
+       sendMultipartRequest(request, encoder);
+
+       boolean isMultipart = listener.isMultipart();
+       Assert.assertEquals(isMultipart, true);
+       List<HttpBodyPart> httpBodyParts = listener.getMultiparts();
+       Assert.assertNotNull(httpBodyParts, "Received http body parts are null");
+       String jsonPart = new String(httpBodyParts.get(0).getContent());
+       Assert.assertEquals(jsonPart, "bar", "Received body Part value doesn't match with the sent value.");
+       Assert.assertEquals(httpBodyParts.get(1).getContentType(), "text/plain", "Incorrect content type received");
+       Assert.assertEquals(httpBodyParts.get(1).getPartName(), "file", "Incorrect part name.");
+       listener.clearBodyParts();
+   }
+
+    @Test(description = "Test whether multipart/form-data can be decoded properly")
+    public void highLevelTestForMultipartMixed() throws Exception {
+        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        request.headers().add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.MULTIPART_MIXED);
+       /*GenericMultipartEncoder encoder = new GenericMultipartEncoder(dataFactory, request, true);
+       encoder.addBodyHttpData(MultipartTestUtil.createJSONAttribute(request, jsonContent, dataFactory));
+       encoder.addBodyHttpData(MultipartTestUtil.createFileUpload(request, dataFactory));*/
+        GenericMultipartEncoder encoder = new GenericMultipartEncoder(request, true);
+        encoder.addBodyAttribute("foo", "bar");
+        encoder.addBodyFileUpload("file", MultipartTestUtil.getFileToUpload(), "text/plain", false);
+        encoder.addBodyFileUpload("file", MultipartTestUtil.getFileToUpload(), "text/plain", false);
+        request = encoder.finalizeRequest();
+        sendMultipartRequest(request, encoder);
+
+        boolean isMultipart = listener.isMultipart();
+        Assert.assertEquals(isMultipart, true);
+        List<HttpBodyPart> httpBodyParts = listener.getMultiparts();
+        Assert.assertNotNull(httpBodyParts, "Received http body parts are null");
+        String jsonPart = new String(httpBodyParts.get(0).getContent());
+        Assert.assertEquals(jsonPart, "bar", "Received body Part value doesn't match with the sent value.");
+        Assert.assertEquals(httpBodyParts.get(1).getContentType(), "text/plain", "Incorrect content type received");
+        Assert.assertEquals(httpBodyParts.get(1).getPartName(), "file", "Incorrect part name.");
+        listener.clearBodyParts();
+    }
+
+    private void sendMultipartRequest(HttpRequest request, GenericMultipartEncoder encoder) throws Exception {
         channel.writeInbound(request);
         if (!channel.isOpen()) {
             encoder.cleanFiles();
