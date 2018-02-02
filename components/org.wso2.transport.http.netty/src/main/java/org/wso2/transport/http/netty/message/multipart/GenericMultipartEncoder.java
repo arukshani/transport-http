@@ -184,7 +184,7 @@ public class GenericMultipartEncoder implements ChunkedInput<HttpContent> {
         }
     }
 
-    public void addBodyHttpData(InterfaceHttpData data) throws HttpPostRequestEncoder.ErrorDataEncoderException {
+    /*public void addBodyHttpData(InterfaceHttpData data) throws HttpPostRequestEncoder.ErrorDataEncoderException {
         if (this.headerFinalized) {
             throw new HttpPostRequestEncoder.ErrorDataEncoderException("Cannot add value once finalized");
         } else {
@@ -214,7 +214,7 @@ public class GenericMultipartEncoder implements ChunkedInput<HttpContent> {
                         if (HttpHeaderValues.MULTIPART_FORM_DATA.toString().equals(mimeType.getBaseType())) {
                             fileUpload.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; " + HttpHeaderValues.NAME + "=\"" + internal.getName() + "\"\r\n");
                         } else {
-                            fileUpload.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + "inline" + "; " + "\r\n");
+                            fileUpload.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + "inline" + "; " + HttpHeaderValues.NAME + "=\"" + internal.getName() + "\"\r\n");
                         }
                     } catch (MimeTypeParseException e) {
                         e.printStackTrace();
@@ -319,7 +319,120 @@ public class GenericMultipartEncoder implements ChunkedInput<HttpContent> {
 
             }
         }
+    }*/
+
+    public void addBodyHttpData(InterfaceHttpData data) throws HttpPostRequestEncoder.ErrorDataEncoderException {
+        if(this.headerFinalized) {
+            throw new HttpPostRequestEncoder.ErrorDataEncoderException("Cannot add value once finalized");
+        } else {
+            this.bodyListDatas.add(ObjectUtil.checkNotNull(data, "data"));
+            FileUpload fileUpload1;
+                if(data instanceof Attribute) {
+                    MultipartAttribute fileUpload;
+                    if(this.duringMixedMode) {
+                        fileUpload = new MultipartAttribute(this.charset);
+                        fileUpload.addValue("\r\n--" + this.multipartMixedBoundary + "--");
+                        this.multipartHttpDatas.add(fileUpload);
+                        this.multipartMixedBoundary = null;
+                        this.currentFileUpload = null;
+                        this.duringMixedMode = false;
+                    }
+
+                    fileUpload = new MultipartAttribute(this.charset);
+                    if(!this.multipartHttpDatas.isEmpty()) {
+                        fileUpload.addValue("\r\n");
+                    }
+
+                    fileUpload.addValue("--" + this.multipartDataBoundary + "\r\n");
+                    Attribute internal = (Attribute)data;
+                    fileUpload.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; " + HttpHeaderValues.NAME + "=\"" + internal.getName() + "\"\r\n");
+                    fileUpload.addValue(HttpHeaderNames.CONTENT_LENGTH + ": " + internal.length() + "\r\n");
+                    Charset localMixed = internal.getCharset();
+                    if(localMixed != null) {
+                        fileUpload.addValue(HttpHeaderNames.CONTENT_TYPE + ": " + "text/plain" + "; " + HttpHeaderValues.CHARSET + '=' + localMixed.name() + "\r\n");
+                    }
+
+                    fileUpload.addValue("\r\n");
+                    this.multipartHttpDatas.add(fileUpload);
+                    this.multipartHttpDatas.add(data);
+                    this.globalBodySize += internal.length() + (long)fileUpload.size();
+                } else if(data instanceof FileUpload) {
+                    fileUpload1 = (FileUpload)data;
+                    MultipartAttribute internal1 = new MultipartAttribute(this.charset);
+                    if(!this.multipartHttpDatas.isEmpty()) {
+                        internal1.addValue("\r\n");
+                    }
+
+                    boolean localMixed1;
+                    if(this.duringMixedMode) {
+                        if(this.currentFileUpload != null && this.currentFileUpload.getName().equals(fileUpload1.getName())) {
+                            localMixed1 = true;
+                        } else {
+                            internal1.addValue("--" + this.multipartMixedBoundary + "--");
+                            this.multipartHttpDatas.add(internal1);
+                            this.multipartMixedBoundary = null;
+                            internal1 = new MultipartAttribute(this.charset);
+                            internal1.addValue("\r\n");
+                            localMixed1 = false;
+                            this.currentFileUpload = fileUpload1;
+                            this.duringMixedMode = false;
+                        }
+                    } else if(this.encoderMode != HttpPostRequestEncoder.EncoderMode.HTML5 && this.currentFileUpload != null && this.currentFileUpload.getName().equals(fileUpload1.getName())) {
+                        this.initMixedMultipart();
+                        MultipartAttribute contentTransferEncoding = (MultipartAttribute)this.multipartHttpDatas.get(this.multipartHttpDatas.size() - 2);
+                        this.globalBodySize -= (long)contentTransferEncoding.size();
+                        StringBuilder replacement = (new StringBuilder(139 + this.multipartDataBoundary.length() + this.multipartMixedBoundary.length() * 2 + fileUpload1.getFilename().length() + fileUpload1.getName().length())).append("--").append(this.multipartDataBoundary).append("\r\n").append(HttpHeaderNames.CONTENT_DISPOSITION).append(": ").append(HttpHeaderValues.FORM_DATA).append("; ").append(HttpHeaderValues.NAME).append("=\"").append(fileUpload1.getName()).append("\"\r\n").append(HttpHeaderNames.CONTENT_TYPE).append(": ").append(HttpHeaderValues.MULTIPART_MIXED).append("; ").append(HttpHeaderValues.BOUNDARY).append('=').append(this.multipartMixedBoundary).append("\r\n\r\n").append("--").append(this.multipartMixedBoundary).append("\r\n").append(HttpHeaderNames.CONTENT_DISPOSITION).append(": ").append(HttpHeaderValues.ATTACHMENT);
+                        if(!fileUpload1.getFilename().isEmpty()) {
+                            replacement.append("; ").append(HttpHeaderValues.FILENAME).append("=\"").append(fileUpload1.getFilename()).append('\"');
+                        }
+
+                        replacement.append("\r\n");
+                        contentTransferEncoding.setValue(replacement.toString(), 1);
+                        contentTransferEncoding.setValue("", 2);
+                        this.globalBodySize += (long)contentTransferEncoding.size();
+                        localMixed1 = true;
+                        this.duringMixedMode = true;
+                    } else {
+                        localMixed1 = false;
+                        this.currentFileUpload = fileUpload1;
+                        this.duringMixedMode = false;
+                    }
+
+                    if(localMixed1) {
+                        internal1.addValue("--" + this.multipartMixedBoundary + "\r\n");
+                        if(fileUpload1.getFilename().isEmpty()) {
+                            internal1.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.ATTACHMENT + "\r\n");
+                        } else {
+                            internal1.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.ATTACHMENT + "; " + HttpHeaderValues.FILENAME + "=\"" + fileUpload1.getFilename() + "\"\r\n");
+                        }
+                    } else {
+                        internal1.addValue("--" + this.multipartDataBoundary + "\r\n");
+                        if(fileUpload1.getFilename().isEmpty()) {
+                            internal1.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; " + HttpHeaderValues.NAME + "=\"" + fileUpload1.getName() + "\"\r\n");
+                        } else {
+                            internal1.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; " + HttpHeaderValues.NAME + "=\"" + fileUpload1.getName() + "\"; " + HttpHeaderValues.FILENAME + "=\"" + fileUpload1.getFilename() + "\"\r\n");
+                        }
+                    }
+
+                    internal1.addValue(HttpHeaderNames.CONTENT_LENGTH + ": " + fileUpload1.length() + "\r\n");
+                    internal1.addValue(HttpHeaderNames.CONTENT_TYPE + ": " + fileUpload1.getContentType());
+                    String contentTransferEncoding1 = fileUpload1.getContentTransferEncoding();
+                    if(contentTransferEncoding1 != null && contentTransferEncoding1.equals(PostBodyUtil.TransferEncodingMechanism.BINARY.value())) {
+                        internal1.addValue("\r\n" + HttpHeaderNames.CONTENT_TRANSFER_ENCODING + ": " + PostBodyUtil.TransferEncodingMechanism.BINARY.value() + "\r\n\r\n");
+                    } else if(fileUpload1.getCharset() != null) {
+                        internal1.addValue("; " + HttpHeaderValues.CHARSET + '=' + fileUpload1.getCharset().name() + "\r\n\r\n");
+                    } else {
+                        internal1.addValue("\r\n\r\n");
+                    }
+
+                    this.multipartHttpDatas.add(internal1);
+                    this.multipartHttpDatas.add(data);
+                    this.globalBodySize += fileUpload1.length() + (long)internal1.size();
+                }
+            }
     }
+
+
 
     public HttpRequest finalizeRequest() throws HttpPostRequestEncoder.ErrorDataEncoderException {
         if (!this.headerFinalized) {

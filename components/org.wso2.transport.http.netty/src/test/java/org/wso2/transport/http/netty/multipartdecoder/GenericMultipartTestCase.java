@@ -48,8 +48,8 @@ public class GenericMultipartTestCase {
     @Test(description = "Test whether multipart/mixed can be decoded properly")
     public void testMultipartMixed() throws Exception {
         HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
-        GenericMultipartEncoder encoder = new GenericMultipartEncoder(dataFactory, request, true);
         request.headers().add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.MULTIPART_MIXED);
+        GenericMultipartEncoder encoder = new GenericMultipartEncoder(dataFactory, request, true);
         encoder.addBodyHttpData(MultipartTestUtil.createJSONAttribute(request, jsonContent, dataFactory));
         encoder.addBodyHttpData(MultipartTestUtil.createFileUpload(request, dataFactory));
         request = encoder.finalizeRequest();
@@ -92,13 +92,11 @@ public class GenericMultipartTestCase {
    public void highLevelTestForMultipartFormData() throws Exception {
        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
        request.headers().add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.MULTIPART_FORM_DATA);
-       /*GenericMultipartEncoder encoder = new GenericMultipartEncoder(dataFactory, request, true);
-       encoder.addBodyHttpData(MultipartTestUtil.createJSONAttribute(request, jsonContent, dataFactory));
-       encoder.addBodyHttpData(MultipartTestUtil.createFileUpload(request, dataFactory));*/
        GenericMultipartEncoder encoder = new GenericMultipartEncoder(request, true);
-       encoder.addBodyAttribute("foo", "bar");
-       encoder.addBodyFileUpload("file", MultipartTestUtil.getFileToUpload(), "text/plain", false);
-       encoder.addBodyFileUpload("file", MultipartTestUtil.getFileToUpload(), "text/plain", false);
+       encoder.addBodyAttribute("foo", jsonContent);
+       encoder.addBodyFileUpload("file1", MultipartTestUtil.getFileToUpload(), "text/plain", false);
+       encoder.addBodyFileUpload("file2", MultipartTestUtil.getFileToUpload(), "text/plain", false);
+       encoder.addBodyFileUpload("file2", MultipartTestUtil.getFileToUpload(), "text/plain", false);
        request = encoder.finalizeRequest();
        sendMultipartRequest(request, encoder);
 
@@ -107,23 +105,20 @@ public class GenericMultipartTestCase {
        List<HttpBodyPart> httpBodyParts = listener.getMultiparts();
        Assert.assertNotNull(httpBodyParts, "Received http body parts are null");
        String jsonPart = new String(httpBodyParts.get(0).getContent());
-       Assert.assertEquals(jsonPart, "bar", "Received body Part value doesn't match with the sent value.");
+       Assert.assertEquals(jsonPart, jsonContent, "Received body Part value doesn't match with the sent value.");
        Assert.assertEquals(httpBodyParts.get(1).getContentType(), "text/plain", "Incorrect content type received");
-       Assert.assertEquals(httpBodyParts.get(1).getPartName(), "file", "Incorrect part name.");
+       Assert.assertEquals(httpBodyParts.get(1).getPartName(), "file1", "Incorrect part name.");
        listener.clearBodyParts();
    }
 
-    @Test(description = "Test whether multipart/form-data can be decoded properly")
+    @Test(description = "Test whether multipart/mixed can be decoded properly")
     public void highLevelTestForMultipartMixed() throws Exception {
         HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
         request.headers().add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.MULTIPART_MIXED);
-       /*GenericMultipartEncoder encoder = new GenericMultipartEncoder(dataFactory, request, true);
-       encoder.addBodyHttpData(MultipartTestUtil.createJSONAttribute(request, jsonContent, dataFactory));
-       encoder.addBodyHttpData(MultipartTestUtil.createFileUpload(request, dataFactory));*/
         GenericMultipartEncoder encoder = new GenericMultipartEncoder(request, true);
         encoder.addBodyAttribute("foo", "bar");
         encoder.addBodyFileUpload("file", MultipartTestUtil.getFileToUpload(), "text/plain", false);
-        encoder.addBodyFileUpload("file", MultipartTestUtil.getFileToUpload(), "text/plain", false);
+        encoder.addBodyFileUpload("file1", MultipartTestUtil.getFileToUpload(), "text/plain", false);
         request = encoder.finalizeRequest();
         sendMultipartRequest(request, encoder);
 

@@ -479,7 +479,7 @@ public class MultipartDissector implements InterfaceHttpPostRequestDecoder {
             } else {
                 boolean i;
                 if (this.currentStatus == GenericMultipartDecoder.MultiPartStatus.DISPOSITION) {
-                    i = HttpHeaderValues.FORM_DATA.contentEqualsIgnoreCase(contents[1]);
+                    i = HttpHeaderValues.FORM_DATA.contentEqualsIgnoreCase(contents[1]) || "inline".equalsIgnoreCase(contents[1]);
                 } else {
                     i = HttpHeaderValues.ATTACHMENT.contentEqualsIgnoreCase(contents[1]) || HttpHeaderValues.FILE.contentEqualsIgnoreCase(contents[1]);
                 }
