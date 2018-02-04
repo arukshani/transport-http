@@ -80,12 +80,12 @@ public class MultipartDissector implements InterfaceHttpPostRequestDecoder {
     private void setMultipart(String contentType) {
         String[] dataBoundary = GenericMultipartDecoder.getMultipartDataBoundary(contentType);
         if (dataBoundary != null) {
-            this.multipartDataBoundary = dataBoundary[0];
+            this.multipartMixedBoundary = dataBoundary[0];
             if (dataBoundary.length > 1 && dataBoundary[1] != null) {
                 this.charset = Charset.forName(dataBoundary[1]);
             }
         } else {
-            this.multipartDataBoundary = null;
+            this.multipartMixedBoundary = null;
         }
 
         this.currentStatus = GenericMultipartDecoder.MultiPartStatus.HEADERDELIMITER;
@@ -225,7 +225,7 @@ public class MultipartDissector implements InterfaceHttpPostRequestDecoder {
                 throw new HttpPostRequestDecoder.ErrorDataDecoderException("Should not be called with the current getStatus");
             case HEADERDELIMITER: {
                 // --AaB03x or --AaB03x--
-                return findMultipartDelimiter(multipartDataBoundary, GenericMultipartDecoder.MultiPartStatus.DISPOSITION,
+                return findMultipartDelimiter(multipartMixedBoundary, GenericMultipartDecoder.MultiPartStatus.DISPOSITION,
                         GenericMultipartDecoder.MultiPartStatus.PREEPILOGUE);
             }
             case DISPOSITION: {
@@ -269,24 +269,24 @@ public class MultipartDissector implements InterfaceHttpPostRequestDecoder {
                     try {
                         if (size > 0) {
                             currentAttribute = factory.createAttribute(request,
-                                    cleanString(nameAttribute.getValue()), size);
+                                    cleanString("tempValue"), size);
                         } else {
                             currentAttribute = factory.createAttribute(request,
-                                    cleanString(nameAttribute.getValue()));
+                                    cleanString("tempValue"));
                         }
                     } catch (NullPointerException e) {
                         throw new HttpPostRequestDecoder.ErrorDataDecoderException(e);
                     } catch (IllegalArgumentException e) {
                         throw new HttpPostRequestDecoder.ErrorDataDecoderException(e);
-                    } catch (IOException e) {
+                    }/* catch (IOException e) {
                         throw new HttpPostRequestDecoder.ErrorDataDecoderException(e);
-                    }
+                    }*/
                     if (localCharset != null) {
                         currentAttribute.setCharset(localCharset);
                     }
                 }
                 // load data
-                if (!loadDataMultipart(undecodedChunk, multipartDataBoundary, currentAttribute)) {
+                if (!loadDataMultipart(undecodedChunk, multipartMixedBoundary, currentAttribute)) {
                     // Delimiter is not found. Need more chunks.
                     return null;
                 }
@@ -299,7 +299,7 @@ public class MultipartDissector implements InterfaceHttpPostRequestDecoder {
             }
             case FILEUPLOAD: {
                 // eventually restart from existing FileUpload
-                return getFileUpload(multipartDataBoundary);
+                return getFileUpload(multipartMixedBoundary);
             }
             case MIXEDDELIMITER: {
                 // --AaB03x or --AaB03x--

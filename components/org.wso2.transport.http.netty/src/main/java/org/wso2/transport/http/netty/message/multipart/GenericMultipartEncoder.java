@@ -94,7 +94,7 @@ public class GenericMultipartEncoder implements ChunkedInput<HttpContent> {
         this(factory, request, multipart, HttpConstants.DEFAULT_CHARSET, HttpPostRequestEncoder.EncoderMode.RFC1738);
     }
 
-    public GenericMultipartEncoder(HttpDataFactory factory, HttpRequest request, boolean multipart, Charset charset, HttpPostRequestEncoder.EncoderMode encoderMode) throws HttpPostRequestEncoder.ErrorDataEncoderException {
+    public GenericMultipartEncoder(HttpDataFactory factory, HttpRequest request, boolean multipartForm, Charset charset, HttpPostRequestEncoder.EncoderMode encoderMode) throws HttpPostRequestEncoder.ErrorDataEncoderException {
         this.isKey = true;
         this.request = (HttpRequest) ObjectUtil.checkNotNull(request, "request");
         this.charset = (Charset) ObjectUtil.checkNotNull(charset, "charset");
@@ -105,11 +105,11 @@ public class GenericMultipartEncoder implements ChunkedInput<HttpContent> {
             this.bodyListDatas = new ArrayList();
             this.isLastChunk = false;
             this.isLastChunkSent = false;
-            this.isMultipart = multipart;
+            this.isMultipart = multipartForm;
             this.multipartHttpDatas = new ArrayList();
             this.encoderMode = encoderMode;
             if (this.isMultipart) {
-                this.initDataMultipart();
+                this.initMixedMultipart();
             }
         }
         if (request.headers().get("Content-Type") != null) {
@@ -131,14 +131,24 @@ public class GenericMultipartEncoder implements ChunkedInput<HttpContent> {
         return Long.toHexString(PlatformDependent.threadLocalRandom().nextLong());
     }
 
-    public void addBodyAttribute(String name, String value) throws HttpPostRequestEncoder.ErrorDataEncoderException {
+  /*  public void addBodyAttribute(String name, String value) throws HttpPostRequestEncoder.ErrorDataEncoderException {
         String svalue = value != null?value:"";
         Attribute data = this.factory.createAttribute(this.request, (String)ObjectUtil.checkNotNull(name, "name"), svalue);
         this.addBodyHttpData(data);
+    }*/
+
+    public void addGenericBodyAttribute(String name, String value) throws HttpPostRequestEncoder.ErrorDataEncoderException {
+        String svalue = value != null?value:"";
+        Attribute data = this.factory.createAttribute(this.request, (String)ObjectUtil.checkNotNull(name, "name"), svalue);
+        this.addGenericBodyHttpData(data);
     }
 
     public void addBodyFileUpload(String name, File file, String contentType, boolean isText) throws HttpPostRequestEncoder.ErrorDataEncoderException {
         this.addBodyFileUpload(name, file.getName(), file, contentType, isText);
+    }
+
+    public void addGenericBodyFileUpload(String name, File file, String contentType, boolean isText) throws HttpPostRequestEncoder.ErrorDataEncoderException {
+        this.addGenericBodyFileUpload(name, file.getName(), file, contentType, isText);
     }
 
     public void addBodyFileUpload(String name, String filename, File file, String contentType, boolean isText) throws HttpPostRequestEncoder.ErrorDataEncoderException {
@@ -170,7 +180,39 @@ public class GenericMultipartEncoder implements ChunkedInput<HttpContent> {
             throw new HttpPostRequestEncoder.ErrorDataEncoderException(var10);
         }
 
-        this.addBodyHttpData(fileUpload);
+        this.addGenericBodyHttpData(fileUpload);
+    }
+
+    public void addGenericBodyFileUpload(String name, String filename, File file, String contentType, boolean isText) throws HttpPostRequestEncoder.ErrorDataEncoderException {
+        ObjectUtil.checkNotNull(name, "name");
+        ObjectUtil.checkNotNull(file, "file");
+        if(filename == null) {
+            filename = "";
+        }
+
+        String scontentType = contentType;
+        String contentTransferEncoding = null;
+        if(contentType == null) {
+            if(isText) {
+                scontentType = "text/plain";
+            } else {
+                scontentType = "application/octet-stream";
+            }
+        }
+
+        if(!isText) {
+            contentTransferEncoding = PostBodyUtil.TransferEncodingMechanism.BINARY.value();
+        }
+
+        FileUpload fileUpload = this.factory.createFileUpload(this.request, name, filename, scontentType, contentTransferEncoding, (Charset)null, file.length());
+
+        try {
+            fileUpload.setContent(file);
+        } catch (IOException var10) {
+            throw new HttpPostRequestEncoder.ErrorDataEncoderException(var10);
+        }
+
+        this.addGenericBodyHttpData(fileUpload);
     }
 
     public void addBodyFileUploads(String name, File[] file, String[] contentType, boolean[] isText) throws HttpPostRequestEncoder.ErrorDataEncoderException {
@@ -321,7 +363,7 @@ public class GenericMultipartEncoder implements ChunkedInput<HttpContent> {
         }
     }*/
 
-    public void addBodyHttpData(InterfaceHttpData data) throws HttpPostRequestEncoder.ErrorDataEncoderException {
+  /*  public void addBodyHttpData(InterfaceHttpData data) throws HttpPostRequestEncoder.ErrorDataEncoderException {
         if(this.headerFinalized) {
             throw new HttpPostRequestEncoder.ErrorDataEncoderException("Cannot add value once finalized");
         } else {
@@ -430,6 +472,163 @@ public class GenericMultipartEncoder implements ChunkedInput<HttpContent> {
                     this.globalBodySize += fileUpload1.length() + (long)internal1.size();
                 }
             }
+    }*/
+
+    public void addGenericBodyHttpData(InterfaceHttpData data) throws HttpPostRequestEncoder.ErrorDataEncoderException {
+        if(this.headerFinalized) {
+            throw new HttpPostRequestEncoder.ErrorDataEncoderException("Cannot add value once finalized");
+        } else {
+            this.bodyListDatas.add(ObjectUtil.checkNotNull(data, "data"));
+            FileUpload fileUpload1;
+            if(data instanceof Attribute) {
+
+                MultipartAttribute fileUpload;
+                fileUpload = new MultipartAttribute(this.charset);
+                fileUpload.addValue("--" + this.multipartMixedBoundary + "\r\n");
+                Attribute internal = (Attribute)data;
+                fileUpload.addValue(HttpHeaderNames.CONTENT_LENGTH + ": " + internal.length() + "\r\n");
+                Charset localMixed = internal.getCharset();
+                    fileUpload.addValue(HttpHeaderNames.CONTENT_TYPE + ": " + "text/plain" + "; " + HttpHeaderValues.CHARSET + '=' + localMixed.name() + "\r\n");
+                fileUpload.addValue("\r\n");
+                this.multipartHttpDatas.add(fileUpload);
+                this.multipartHttpDatas.add(data);
+                this.globalBodySize += internal.length() + (long)fileUpload.size();
+              /*  MultipartAttribute fileUpload;
+                if(this.duringMixedMode) {
+                    fileUpload = new MultipartAttribute(this.charset);
+                    fileUpload.addValue("\r\n--" + this.multipartMixedBoundary + "--");
+                    this.multipartHttpDatas.add(fileUpload);
+                    this.multipartMixedBoundary = null;
+                    this.currentFileUpload = null;
+                    this.duringMixedMode = false;
+                }
+
+                fileUpload = new MultipartAttribute(this.charset);
+                if(!this.multipartHttpDatas.isEmpty()) {
+                    fileUpload.addValue("\r\n");
+                }
+
+                fileUpload.addValue("--" + this.multipartDataBoundary + "\r\n");
+                Attribute internal = (Attribute)data;
+                fileUpload.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; " + HttpHeaderValues.NAME + "=\"" + internal.getName() + "\"\r\n");
+                fileUpload.addValue(HttpHeaderNames.CONTENT_LENGTH + ": " + internal.length() + "\r\n");
+                Charset localMixed = internal.getCharset();
+                if(localMixed != null) {
+                    fileUpload.addValue(HttpHeaderNames.CONTENT_TYPE + ": " + "text/plain" + "; " + HttpHeaderValues.CHARSET + '=' + localMixed.name() + "\r\n");
+                }
+
+                fileUpload.addValue("\r\n");
+                this.multipartHttpDatas.add(fileUpload);
+                this.multipartHttpDatas.add(data);
+                this.globalBodySize += internal.length() + (long)fileUpload.size();*/
+            } else if(data instanceof FileUpload) {
+                fileUpload1 = (FileUpload)data;
+                MultipartAttribute internal1 = new MultipartAttribute(this.charset);
+                if(!this.multipartHttpDatas.isEmpty()) {
+                    internal1.addValue("\r\n");
+                }
+
+
+                    internal1.addValue("--" + this.multipartMixedBoundary + "\r\n");
+                    if(fileUpload1.getFilename().isEmpty()) {
+                        internal1.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.ATTACHMENT + "\r\n");
+                    } else {
+                        internal1.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.ATTACHMENT + "; " + HttpHeaderValues.FILENAME + "=\"" + fileUpload1.getFilename() + "\"\r\n");
+                    }
+                internal1.addValue("--" + this.multipartMixedBoundary + "\r\n");
+                if(fileUpload1.getFilename().isEmpty()) {
+                    internal1.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.ATTACHMENT + "\r\n");
+                } else {
+                    internal1.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.ATTACHMENT + "; " + HttpHeaderValues.FILENAME + "=\"" + fileUpload1.getFilename() + "\"\r\n");
+                }
+                internal1.addValue(HttpHeaderNames.CONTENT_LENGTH + ": " + fileUpload1.length() + "\r\n");
+                internal1.addValue(HttpHeaderNames.CONTENT_TYPE + ": " + fileUpload1.getContentType());
+                String contentTransferEncoding1 = fileUpload1.getContentTransferEncoding();
+                if(contentTransferEncoding1 != null && contentTransferEncoding1.equals(PostBodyUtil.TransferEncodingMechanism.BINARY.value())) {
+                    internal1.addValue("\r\n" + HttpHeaderNames.CONTENT_TRANSFER_ENCODING + ": " + PostBodyUtil.TransferEncodingMechanism.BINARY.value() + "\r\n\r\n");
+                } else if(fileUpload1.getCharset() != null) {
+                    internal1.addValue("; " + HttpHeaderValues.CHARSET + '=' + fileUpload1.getCharset().name() + "\r\n\r\n");
+                } else {
+                    internal1.addValue("\r\n\r\n");
+                }
+
+                this.multipartHttpDatas.add(internal1);
+                this.multipartHttpDatas.add(data);
+                this.globalBodySize += fileUpload1.length() + (long)internal1.size();
+
+                /* fileUpload1 = (FileUpload)data;
+                MultipartAttribute internal1 = new MultipartAttribute(this.charset);
+                if(!this.multipartHttpDatas.isEmpty()) {
+                    internal1.addValue("\r\n");
+                }
+
+                boolean localMixed1;
+                if(this.duringMixedMode) {
+                    if(this.currentFileUpload != null && this.currentFileUpload.getName().equals(fileUpload1.getName())) {
+                        localMixed1 = true;
+                    } else {
+                        internal1.addValue("--" + this.multipartMixedBoundary + "--");
+                        this.multipartHttpDatas.add(internal1);
+                        this.multipartMixedBoundary = null;
+                        internal1 = new MultipartAttribute(this.charset);
+                        internal1.addValue("\r\n");
+                        localMixed1 = false;
+                        this.currentFileUpload = fileUpload1;
+                        this.duringMixedMode = false;
+                    }
+                } else if(this.encoderMode != HttpPostRequestEncoder.EncoderMode.HTML5 && this.currentFileUpload != null && this.currentFileUpload.getName().equals(fileUpload1.getName())) {
+                    this.initMixedMultipart();
+                    MultipartAttribute contentTransferEncoding = (MultipartAttribute)this.multipartHttpDatas.get(this.multipartHttpDatas.size() - 2);
+                    this.globalBodySize -= (long)contentTransferEncoding.size();
+                    StringBuilder replacement = (new StringBuilder(139 + this.multipartDataBoundary.length() + this.multipartMixedBoundary.length() * 2 + fileUpload1.getFilename().length() + fileUpload1.getName().length())).append("--").append(this.multipartDataBoundary).append("\r\n").append(HttpHeaderNames.CONTENT_DISPOSITION).append(": ").append(HttpHeaderValues.FORM_DATA).append("; ").append(HttpHeaderValues.NAME).append("=\"").append(fileUpload1.getName()).append("\"\r\n").append(HttpHeaderNames.CONTENT_TYPE).append(": ").append(HttpHeaderValues.MULTIPART_MIXED).append("; ").append(HttpHeaderValues.BOUNDARY).append('=').append(this.multipartMixedBoundary).append("\r\n\r\n").append("--").append(this.multipartMixedBoundary).append("\r\n").append(HttpHeaderNames.CONTENT_DISPOSITION).append(": ").append(HttpHeaderValues.ATTACHMENT);
+                    if(!fileUpload1.getFilename().isEmpty()) {
+                        replacement.append("; ").append(HttpHeaderValues.FILENAME).append("=\"").append(fileUpload1.getFilename()).append('\"');
+                    }
+
+                    replacement.append("\r\n");
+                    contentTransferEncoding.setValue(replacement.toString(), 1);
+                    contentTransferEncoding.setValue("", 2);
+                    this.globalBodySize += (long)contentTransferEncoding.size();
+                    localMixed1 = true;
+                    this.duringMixedMode = true;
+                } else {
+                    localMixed1 = false;
+                    this.currentFileUpload = fileUpload1;
+                    this.duringMixedMode = false;
+                }
+
+                if(localMixed1) {
+                    internal1.addValue("--" + this.multipartMixedBoundary + "\r\n");
+                    if(fileUpload1.getFilename().isEmpty()) {
+                        internal1.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.ATTACHMENT + "\r\n");
+                    } else {
+                        internal1.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.ATTACHMENT + "; " + HttpHeaderValues.FILENAME + "=\"" + fileUpload1.getFilename() + "\"\r\n");
+                    }
+                } else {
+                    internal1.addValue("--" + this.multipartDataBoundary + "\r\n");
+                    if(fileUpload1.getFilename().isEmpty()) {
+                        internal1.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; " + HttpHeaderValues.NAME + "=\"" + fileUpload1.getName() + "\"\r\n");
+                    } else {
+                        internal1.addValue(HttpHeaderNames.CONTENT_DISPOSITION + ": " + HttpHeaderValues.FORM_DATA + "; " + HttpHeaderValues.NAME + "=\"" + fileUpload1.getName() + "\"; " + HttpHeaderValues.FILENAME + "=\"" + fileUpload1.getFilename() + "\"\r\n");
+                    }
+                }
+
+                internal1.addValue(HttpHeaderNames.CONTENT_LENGTH + ": " + fileUpload1.length() + "\r\n");
+                internal1.addValue(HttpHeaderNames.CONTENT_TYPE + ": " + fileUpload1.getContentType());
+                String contentTransferEncoding1 = fileUpload1.getContentTransferEncoding();
+                if(contentTransferEncoding1 != null && contentTransferEncoding1.equals(PostBodyUtil.TransferEncodingMechanism.BINARY.value())) {
+                    internal1.addValue("\r\n" + HttpHeaderNames.CONTENT_TRANSFER_ENCODING + ": " + PostBodyUtil.TransferEncodingMechanism.BINARY.value() + "\r\n\r\n");
+                } else if(fileUpload1.getCharset() != null) {
+                    internal1.addValue("; " + HttpHeaderValues.CHARSET + '=' + fileUpload1.getCharset().name() + "\r\n\r\n");
+                } else {
+                    internal1.addValue("\r\n\r\n");
+                }
+
+                this.multipartHttpDatas.add(internal1);
+                this.multipartHttpDatas.add(data);
+                this.globalBodySize += fileUpload1.length() + (long)internal1.size();*/
+            }
+        }
     }
 
 
@@ -438,13 +637,13 @@ public class GenericMultipartEncoder implements ChunkedInput<HttpContent> {
         if (!this.headerFinalized) {
             if (this.isMultipart) {
                 MultipartAttribute headers = new MultipartAttribute(this.charset);
-                if (this.duringMixedMode) {
+              /*  if (this.duringMixedMode) {
                     headers.addValue("\r\n--" + this.multipartMixedBoundary + "--");
-                }
+                }*/
 
-                headers.addValue("\r\n--" + this.multipartDataBoundary + "--\r\n");
+                headers.addValue("\r\n--" + this.multipartMixedBoundary + "--\r\n");
                 this.multipartHttpDatas.add(headers);
-                this.multipartMixedBoundary = null;
+              //  this.multipartMixedBoundary = null;
                 this.currentFileUpload = null;
                 this.duringMixedMode = false;
                 this.globalBodySize += (long) headers.size();
@@ -470,13 +669,13 @@ public class GenericMultipartEncoder implements ChunkedInput<HttpContent> {
             if (this.isMultipart) {
                 try {
                     MimeType mimeType = new MimeType(this.mediaType);
-                    if (HttpHeaderValues.MULTIPART_FORM_DATA.toString().equals(mimeType.getBaseType())) {
+                   /* if (HttpHeaderValues.MULTIPART_FORM_DATA.toString().equals(mimeType.getBaseType())) {
                         String var10 = HttpHeaderValues.MULTIPART_FORM_DATA + "; " + HttpHeaderValues.BOUNDARY + '=' + this.multipartDataBoundary;
                         var9.add(HttpHeaderNames.CONTENT_TYPE, var10);
-                    } else {
-                        String var10 = HttpHeaderValues.MULTIPART_MIXED + "; " + HttpHeaderValues.BOUNDARY + '=' + this.multipartDataBoundary;
+                    } else {*/
+                        String var10 = HttpHeaderValues.MULTIPART_MIXED + "; " + HttpHeaderValues.BOUNDARY + '=' + this.multipartMixedBoundary;
                         var9.add(HttpHeaderNames.CONTENT_TYPE, var10);
-                    }
+                  /*  }*/
                 } catch (MimeTypeParseException e) {
                     e.printStackTrace();
                 }
