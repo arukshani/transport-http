@@ -48,6 +48,8 @@ import org.wso2.transport.http.netty.message.HTTPCarbonMessage;
 
 import java.net.SocketAddress;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.wso2.transport.http.netty.common.Constants.IDLE_TIMEOUT_TRIGGERED_WHILE_READING_INBOUND_REQUEST;
@@ -81,6 +83,12 @@ public class SourceHandler extends ChannelInboundHandlerAdapter {
     private SocketAddress remoteAddress;
     private SourceErrorHandler sourceErrorHandler;
     private boolean continueRequest = false;
+
+    private final int intialEventsHeld = 3;
+    private final int maximumEvents = 4; //We should let the user provide a value for this
+    private int sequence = 0; //Keep track of the request order for http 1.1 pipelining
+    private final Queue<HTTPCarbonMessage> holdingQueue = new PriorityQueue<>(intialEventsHeld);
+    private int nextRequiredSequence = 0;
 
     public SourceHandler(ServerConnectorFuture serverConnectorFuture, String interfaceId, ChunkConfig chunkConfig,
                          KeepAliveConfig keepAliveConfig, String serverName, ChannelGroup allChannels) {
@@ -130,6 +138,17 @@ public class SourceHandler extends ChannelInboundHandlerAdapter {
                 try {
                     inboundRequestMsg.addHttpContent(httpContent);
                     if (Util.isLastHttpContent(httpContent)) {
+                        inboundRequestMsg.setSequenceId(sequence++);
+                        if (ctx.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get() == null) {
+                            ctx.channel().attr(Constants.MAX_EVENTS_HELD).set(maximumEvents);
+                        }
+                        if (ctx.channel().attr(Constants.RESPONSE_QUEUE).get() == null) {
+                            ctx.channel().attr(Constants.RESPONSE_QUEUE).set(holdingQueue);
+                        }
+                        if (ctx.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get() == null) {
+                            ctx.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextRequiredSequence);
+                        }
+                        log.info("Inside source handler lasthttpcontent - message ID: " + inboundRequestMsg.getHeaders().get("message-id") + " Current thread " + Thread.currentThread().getId() + " -Channel ID:" + ctx.channel().id());
                         if (handlerExecutor != null) {
                             handlerExecutor.executeAtSourceRequestSending(inboundRequestMsg);
                         }

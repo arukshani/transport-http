@@ -21,6 +21,8 @@ import org.wso2.transport.http.netty.contractimpl.DefaultHttpClientConnector;
 import org.wso2.transport.http.netty.message.HTTPCarbonMessage;
 import org.wso2.transport.http.netty.sender.channel.TargetChannel;
 
+import java.util.Queue;
+
 /**
  * Common Constants used by gate way.
  */
@@ -148,6 +150,7 @@ public final class Constants {
     public static final String HTTP_REASON_PHRASE = "HTTP_REASON_PHRASE";
 
     public static final String CHNL_HNDLR_CTX = "CHNL_HNDLR_CTX";
+    public static final String INBOUND_REQUEST_SEQUENCE_ID = "INBOUND_REQUEST_SEQUENCE_ID";
 
     public static final String SRC_HANDLER = "SRC_HANDLER";
     public static final String POOLED_BYTE_BUFFER_FACTORY = "POOLED_BYTE_BUFFER_FACTORY";
@@ -248,6 +251,11 @@ public final class Constants {
             .valueOf("TARGET_CHANNEL_REFERENCE");
     public static final AttributeKey<DefaultHttpClientConnector> CLIENT_CONNECTOR = AttributeKey
             .valueOf("CLIENT_CONNECTOR");
+
+    public static final AttributeKey<Integer> MAX_EVENTS_HELD = AttributeKey.valueOf("MAX_EVENTS_HELD");
+    public static final AttributeKey<Queue<HTTPCarbonMessage>> RESPONSE_QUEUE = AttributeKey.valueOf("RESPONSE_QUEUE");
+    public static final AttributeKey<Integer> NEXT_SEQUENCE_NUMBER = AttributeKey.valueOf("NEXT_SEQUENCE_NUMBER");
+
     public static final int REDIRECT_SEE_OTHER_303 = 303;
 
     public static final String UTF8 = "UTF-8";

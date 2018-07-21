@@ -29,6 +29,8 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.wso2.transport.http.netty.common.Constants;
 import org.wso2.transport.http.netty.contract.HttpResponseFuture;
 import org.wso2.transport.http.netty.contract.ServerConnectorException;
@@ -38,6 +40,7 @@ import org.wso2.transport.http.netty.contractimpl.HttpWsServerConnectorFuture;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,11 +48,15 @@ import java.util.Map;
 /**
  * HTTP based representation for HTTPCarbonMessage.
  */
-public class HTTPCarbonMessage {
+public class HTTPCarbonMessage implements Comparable<HTTPCarbonMessage>{
+
+    private static final Logger log = LoggerFactory.getLogger(HTTPCarbonMessage.class);
+
 
     protected HttpMessage httpMessage;
     private EntityCollector blockingEntityCollector;
     private Map<String, Object> properties = new HashMap<>();
+    private int sequenceId;
 
     private MessageFuture messageFuture;
     private final ServerConnectorFuture httpOutboundRespFuture = new HttpWsServerConnectorFuture();
@@ -271,6 +278,7 @@ public class HTTPCarbonMessage {
     }
 
     public HttpResponseFuture respond(HTTPCarbonMessage httpCarbonMessage) throws ServerConnectorException {
+        log.info("Inside Respond - message ID: " + httpCarbonMessage.getHeaders().get("message-id") + " Current thread "+ Thread.currentThread().getId());
         httpOutboundRespFuture.notifyHttpListener(httpCarbonMessage);
         return httpOutboundRespStatusFuture;
     }
@@ -378,5 +386,22 @@ public class HTTPCarbonMessage {
 
     public synchronized void setIoException(IOException ioException) {
         this.ioException = ioException;
+    }
+
+    public int getSequenceId() {
+        return sequenceId;
+    }
+
+    public void setSequenceId(int sequenceId) {
+        this.sequenceId = sequenceId;
+    }
+
+    @Override
+    public int compareTo(HTTPCarbonMessage other) {
+        return this.sequenceId - other.getSequenceId();
+    }
+
+    public MessageFuture getMessageFuture() {
+        return messageFuture;
     }
 }
