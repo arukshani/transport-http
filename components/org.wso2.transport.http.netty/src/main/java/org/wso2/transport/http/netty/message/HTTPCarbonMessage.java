@@ -40,7 +40,6 @@ import org.wso2.transport.http.netty.contractimpl.HttpWsServerConnectorFuture;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,9 +47,9 @@ import java.util.Map;
 /**
  * HTTP based representation for HTTPCarbonMessage.
  */
-public class HTTPCarbonMessage implements Comparable<HTTPCarbonMessage>{
+public class HTTPCarbonMessage implements Comparable<HTTPCarbonMessage> {
 
-    private static final Logger log = LoggerFactory.getLogger(HTTPCarbonMessage.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(HTTPCarbonMessage.class);
 
 
     protected HttpMessage httpMessage;
@@ -278,7 +277,8 @@ public class HTTPCarbonMessage implements Comparable<HTTPCarbonMessage>{
     }
 
     public HttpResponseFuture respond(HTTPCarbonMessage httpCarbonMessage) throws ServerConnectorException {
-        log.info("Inside Respond - message ID: " + httpCarbonMessage.getHeaders().get("message-id") + " Current thread "+ Thread.currentThread().getId());
+        LOGGER.info("Inside Respond - message ID: " + httpCarbonMessage.getHeaders().get("message-id") +
+                " Current thread " + Thread.currentThread().getId());
         httpOutboundRespFuture.notifyHttpListener(httpCarbonMessage);
         return httpOutboundRespStatusFuture;
     }
@@ -401,7 +401,7 @@ public class HTTPCarbonMessage implements Comparable<HTTPCarbonMessage>{
         return this.sequenceId - other.getSequenceId();
     }
 
-    public MessageFuture getMessageFuture() {
+    public synchronized MessageFuture getMessageFuture() {
         return messageFuture;
     }
 }

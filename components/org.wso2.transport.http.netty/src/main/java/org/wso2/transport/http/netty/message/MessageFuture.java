@@ -42,52 +42,59 @@ public class MessageFuture {
     }
 
     public void setMessageListener(MessageListener messageListener) {
-        synchronized (httpCarbonMessage) {
-            this.messageListener = messageListener;
 
-                if (this.sourceContext != null) {
-                    Integer maxEventsHeld = this.sourceContext.channel().attr(Constants.MAX_EVENTS_HELD).get();
-                    Queue<HTTPCarbonMessage> responseQueue = this.sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
-                    Integer nextSequenceNumber = this.sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
-                    log.info("MaxEventsHeld : " + maxEventsHeld + " size-response-queue : " + responseQueue.size() + " next-sequence-number: " + nextSequenceNumber + " -Channel ID:" + sourceContext.channel().id());
+        this.messageListener = messageListener;
 
-                    if (responseQueue.size() < maxEventsHeld) {
-                        responseQueue.add(httpCarbonMessage);
-                        while (!responseQueue.isEmpty()) {
-                            final HTTPCarbonMessage queuedPipelinedResponse = responseQueue.peek();
-                            int currentSequenceNumber = queuedPipelinedResponse.getSequenceId();
-                            if (currentSequenceNumber != nextSequenceNumber) {
-                                break;
-                            }
-                            responseQueue.remove();
-                            while (!queuedPipelinedResponse.isEmpty()) {
-                                HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
-                                //Notify the correct listener related to currently executing message
-                                //notifyMessageListener(httpContent);
-                                queuedPipelinedResponse.getMessageFuture().notifyMessageListener(httpContent);
-                                if (httpContent instanceof LastHttpContent) {
-                                    nextSequenceNumber++;
-                                    this.sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);
-                                    queuedPipelinedResponse.removeMessageFuture();
-                                }
-                            }
-                        }
-                    } else {
-                        this.sourceContext.close();
+        if (this.sourceContext != null) {
+            Integer maxEventsHeld = this.sourceContext.channel().attr(Constants.MAX_EVENTS_HELD).get();
+            Queue<HTTPCarbonMessage> responseQueue = this.sourceContext.channel().attr(Constants.RESPONSE_QUEUE)
+                    .get();
+            Integer nextSequenceNumber = this.sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
+            log.info("MaxEventsHeld : " + maxEventsHeld + " size-response-queue : " + responseQueue.size() +
+                    " next-sequence-number: " + nextSequenceNumber + " -Channel ID:" + sourceContext.channel()
+                    .id());
+
+            if (responseQueue.size() < maxEventsHeld) {
+                responseQueue.add(httpCarbonMessage);
+                while (!responseQueue.isEmpty()) {
+                    final HTTPCarbonMessage queuedPipelinedResponse = responseQueue.peek();
+                    int currentSequenceNumber = queuedPipelinedResponse.getSequenceId();
+                    if (currentSequenceNumber != nextSequenceNumber) {
+                        break;
                     }
-                } else {
-                    while (!httpCarbonMessage.isEmpty()) {
-                        HttpContent httpContent = httpCarbonMessage.getHttpContent();
-                        notifyMessageListener(httpContent);
-                        if (httpContent instanceof LastHttpContent) {
-                            httpCarbonMessage.removeMessageFuture();
-                            return;
+                    responseQueue.remove();
+                    synchronized (queuedPipelinedResponse) {
+                        while (!queuedPipelinedResponse.isEmpty()) {
+                            HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
+                            //Notify the correct listener related to currently executing message
+                            //notifyMessageListener(httpContent);
+                            queuedPipelinedResponse.getMessageFuture().notifyMessageListener(httpContent);
+                            if (httpContent instanceof LastHttpContent) {
+                                nextSequenceNumber++;
+                                this.sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER)
+                                        .set(nextSequenceNumber);
+                                queuedPipelinedResponse.removeMessageFuture();
+                            }
                         }
+                    }
+                }
+            } else {
+                this.sourceContext.close();
+            }
+        } else {
+            synchronized (httpCarbonMessage) {
+                while (!httpCarbonMessage.isEmpty()) {
+                    HttpContent httpContent = httpCarbonMessage.getHttpContent();
+                    notifyMessageListener(httpContent);
+                    if (httpContent instanceof LastHttpContent) {
+                        httpCarbonMessage.removeMessageFuture();
+                        return;
                     }
                 }
             }
         }
 
+    }
 
     void notifyMessageListener(HttpContent httpContent) {
         if (this.messageListener != null) {
@@ -105,6 +112,7 @@ public class MessageFuture {
         return this.httpCarbonMessage.getBlockingEntityCollector().getHttpContent();
     }
 
+    //IMPORTANT: Only set this when you want the requests to be pipelined. Not to be used with HTTP2.
     public void setSourceContext(ChannelHandlerContext sourceContext) {
         this.sourceContext = sourceContext;
     }

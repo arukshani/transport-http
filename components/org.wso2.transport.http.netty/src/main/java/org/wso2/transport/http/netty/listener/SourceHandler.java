@@ -85,7 +85,7 @@ public class SourceHandler extends ChannelInboundHandlerAdapter {
     private boolean continueRequest = false;
 
     private final int intialEventsHeld = 3;
-    private final int maximumEvents = 4; //We should let the user provide a value for this
+    private final int maximumEvents = 3; //We should let the user provide a value for this
     private int sequence = 0; //Keep track of the request order for http 1.1 pipelining
     private final Queue<HTTPCarbonMessage> holdingQueue = new PriorityQueue<>(intialEventsHeld);
     private int nextRequiredSequence = 0;
@@ -148,7 +148,9 @@ public class SourceHandler extends ChannelInboundHandlerAdapter {
                         if (ctx.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get() == null) {
                             ctx.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextRequiredSequence);
                         }
-                        log.info("Inside source handler lasthttpcontent - message ID: " + inboundRequestMsg.getHeaders().get("message-id") + " Current thread " + Thread.currentThread().getId() + " -Channel ID:" + ctx.channel().id());
+                        log.info("Inside source handler lasthttpcontent - message ID: " +
+                                inboundRequestMsg.getHeaders().get("message-id") + " Current thread " +
+                                Thread.currentThread().getId() + " -Channel ID:" + ctx.channel().id());
                         if (handlerExecutor != null) {
                             handlerExecutor.executeAtSourceRequestSending(inboundRequestMsg);
                         }

@@ -47,7 +47,6 @@ import org.wso2.transport.http.netty.message.MessageFuture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.wso2.transport.http.netty.common.Constants.CHUNKING_CONFIG;
@@ -108,13 +107,17 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
 
             resetOutboundListenerState();
             boolean keepAlive = isKeepAlive();
-            log.info("Inside response listener on message - message ID: " + outboundResponseMsg.getHeaders().get("message-id") + " -Current thread "+  Thread.currentThread().getId() + " -Channel ID:" + sourceContext.channel().id());
+            log.info("Inside response listener on message - message ID: " + outboundResponseMsg.getHeaders()
+                    .get("message-id") + " -Current thread " + Thread.currentThread().getId() + " -Channel ID:"
+                    + sourceContext.channel().id());
             MessageFuture messageFuture = outboundResponseMsg.getHttpContentAsync();
             messageFuture.setSourceContext(this.sourceContext);
             messageFuture.setMessageListener(httpContent ->
                     this.sourceContext.channel().eventLoop().execute(() -> {
                         try {
-                            log.info("Actual write started - message ID: " + outboundResponseMsg.getHeaders().get("message-id") + " -Current thread "+  Thread.currentThread().getId() + " -Channel ID:" + sourceContext.channel().id());
+                            log.info("Actual write started - message ID: " + outboundResponseMsg.getHeaders()
+                                    .get("message-id") + " -Current thread " + Thread.currentThread().getId() +
+                                    " -Channel ID:" + sourceContext.channel().id());
                             writeOutboundResponse(outboundResponseMsg, keepAlive, httpContent);
                         } catch (Exception exception) {
                             String errorMsg = "Failed to send the outbound response : "
