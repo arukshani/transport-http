@@ -421,7 +421,11 @@ public class HTTPCarbonMessage implements Comparable<HTTPCarbonMessage> {
             result = prime * result + ((this.httpMessage == null) ? 0 : this.httpMessage.hashCode());
             return result;
         }*/
-       return Objects.hashCode(sequenceId);
+        if (this.sequenceId != 0) {
+            return Objects.hashCode(sequenceId);
+        } else {
+            return super.hashCode();
+        }
     }
 
     public synchronized MessageFuture getMessageFuture() {
