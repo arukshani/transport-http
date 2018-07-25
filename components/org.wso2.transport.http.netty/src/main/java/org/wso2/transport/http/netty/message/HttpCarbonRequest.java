@@ -50,4 +50,14 @@ public class HttpCarbonRequest extends HTTPCarbonMessage {
     public void setUri(String uri) {
         this.httpRequest.setUri(uri);
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        return super.equals(obj);
+    }
+
+    @Override
+    public synchronized int hashCode() {
+        return super.hashCode();
+    }
 }

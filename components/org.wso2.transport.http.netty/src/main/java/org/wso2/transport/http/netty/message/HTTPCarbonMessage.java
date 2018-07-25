@@ -43,6 +43,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * HTTP based representation for HTTPCarbonMessage.
@@ -409,11 +410,18 @@ public class HTTPCarbonMessage implements Comparable<HTTPCarbonMessage> {
     }
 
     @Override
-    public synchronized int hashCode() {
+    public int hashCode() {
         int prime = 31;
-        int result = 1;
-        result = prime * result + ((this.httpMessage == null) ? 0 : this.httpMessage.hashCode());
-        return result;
+        //int result = 1;
+        //return prime * this.sequenceId;
+       /* if (this.sequenceId != 0) {
+            return prime * this.sequenceId;
+        }
+        synchronized (this) {
+            result = prime * result + ((this.httpMessage == null) ? 0 : this.httpMessage.hashCode());
+            return result;
+        }*/
+       return Objects.hashCode(sequenceId);
     }
 
     public synchronized MessageFuture getMessageFuture() {
