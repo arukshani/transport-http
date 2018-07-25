@@ -49,65 +49,63 @@ public class MessageFuture {
             Integer maxEventsHeld = this.sourceContext.channel().attr(Constants.MAX_EVENTS_HELD).get();
             Queue<HTTPCarbonMessage> responseQueue = this.sourceContext.channel().attr(Constants.RESPONSE_QUEUE)
                     .get();
-            Integer nextSequenceNumber = this.sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
-            log.info("MaxEventsHeld : " + maxEventsHeld + " size-response-queue : " + responseQueue.size() +
-                    " next-sequence-number: " + nextSequenceNumber + " -Channel ID:" + sourceContext.channel()
-                    .id());
+            if (responseQueue != null) {
+                Integer nextSequenceNumber = this.sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
+                log.info("MaxEventsHeld : " + maxEventsHeld + " size-response-queue : " + responseQueue.size() +
+                        " next-sequence-number: " + nextSequenceNumber + " -Channel ID:" + sourceContext.channel()
+                        .id());
 
-            if (responseQueue.size() < maxEventsHeld) {
-                responseQueue.add(httpCarbonMessage);
-                while (!responseQueue.isEmpty()) {
-                    final HTTPCarbonMessage queuedPipelinedResponse = responseQueue.peek();
-                    int currentSequenceNumber = queuedPipelinedResponse.getSequenceId();
-                    if (currentSequenceNumber != 0) {
-                        if (currentSequenceNumber != nextSequenceNumber) {
-                            break;
-                        }
-                        responseQueue.remove();
-                        synchronized (queuedPipelinedResponse) {
-                            while (!queuedPipelinedResponse.isEmpty()) {
-                                HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
-                                //Notify the correct listener related to currently executing message
-                                //notifyMessageListener(httpContent);
-                                queuedPipelinedResponse.getMessageFuture().notifyMessageListener(httpContent);
-                                if (httpContent instanceof LastHttpContent) {
-                                    nextSequenceNumber++;
-                                    this.sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER)
-                                            .set(nextSequenceNumber);
-                                    queuedPipelinedResponse.removeMessageFuture();
+                if (responseQueue.size() < maxEventsHeld) {
+                    responseQueue.add(httpCarbonMessage);
+                    while (!responseQueue.isEmpty()) {
+                        final HTTPCarbonMessage queuedPipelinedResponse = responseQueue.peek();
+                        int currentSequenceNumber = queuedPipelinedResponse.getSequenceId();
+                        if (currentSequenceNumber != 0) {
+                            if (currentSequenceNumber != nextSequenceNumber) {
+                                break;
+                            }
+                            responseQueue.remove();
+                            synchronized (queuedPipelinedResponse) {
+                                while (!queuedPipelinedResponse.isEmpty()) {
+                                    HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
+                                    //Notify the correct listener related to currently executing message
+                                    //notifyMessageListener(httpContent);
+                                    queuedPipelinedResponse.getMessageFuture().notifyMessageListener(httpContent);
+                                    if (httpContent instanceof LastHttpContent) {
+                                        nextSequenceNumber++;
+                                        this.sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER)
+                                                .set(nextSequenceNumber);
+                                        queuedPipelinedResponse.removeMessageFuture();
+                                    }
                                 }
                             }
-                        }
-                    } else {
-                        responseQueue.remove();
-                        synchronized (httpCarbonMessage) {
-                            while (!httpCarbonMessage.isEmpty()) {
-                                HttpContent httpContent = httpCarbonMessage.getHttpContent();
-                                notifyMessageListener(httpContent);
-                                if (httpContent instanceof LastHttpContent) {
-                                    httpCarbonMessage.removeMessageFuture();
-                                    return;
-                                }
-                            }
+                        } else {
+                            responseQueue.remove();
+                            sendMessageContent(httpCarbonMessage);
                         }
                     }
+                } else {
+                    this.sourceContext.close();
                 }
             } else {
-                this.sourceContext.close();
+                sendMessageContent(httpCarbonMessage);
             }
         } else {
-            synchronized (httpCarbonMessage) {
-                while (!httpCarbonMessage.isEmpty()) {
-                    HttpContent httpContent = httpCarbonMessage.getHttpContent();
-                    notifyMessageListener(httpContent);
-                    if (httpContent instanceof LastHttpContent) {
-                        httpCarbonMessage.removeMessageFuture();
-                        return;
-                    }
+            sendMessageContent(httpCarbonMessage);
+        }
+    }
+
+    void sendMessageContent(HTTPCarbonMessage httpCarbonMessage) {
+        synchronized (httpCarbonMessage) {
+            while (!httpCarbonMessage.isEmpty()) {
+                HttpContent httpContent = httpCarbonMessage.getHttpContent();
+                notifyMessageListener(httpContent);
+                if (httpContent instanceof LastHttpContent) {
+                    httpCarbonMessage.removeMessageFuture();
+                    return;
                 }
             }
         }
-
     }
 
     void notifyMessageListener(HttpContent httpContent) {
