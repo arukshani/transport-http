@@ -51,7 +51,6 @@ public class HTTPCarbonMessage implements Comparable<HTTPCarbonMessage> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HTTPCarbonMessage.class);
 
-
     protected HttpMessage httpMessage;
     private EntityCollector blockingEntityCollector;
     private Map<String, Object> properties = new HashMap<>();
@@ -398,7 +397,23 @@ public class HTTPCarbonMessage implements Comparable<HTTPCarbonMessage> {
 
     @Override
     public int compareTo(HTTPCarbonMessage other) {
-        return this.sequenceId - other.getSequenceId();
+        if (this.sequenceId != 0) {
+            return this.sequenceId - other.getSequenceId();
+        }
+        return this.equals(other) ? 0 : 1;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof HTTPCarbonMessage && compareTo((HTTPCarbonMessage) obj) == 0;
+    }
+
+    @Override
+    public synchronized int hashCode() {
+        int prime = 31;
+        int result = 1;
+        result = prime * result + ((this.httpMessage == null) ? 0 : this.httpMessage.hashCode());
+        return result;
     }
 
     public synchronized MessageFuture getMessageFuture() {

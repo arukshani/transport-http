@@ -86,9 +86,9 @@ public class SourceHandler extends ChannelInboundHandlerAdapter {
 
     private final int intialEventsHeld = 3;
     private final int maximumEvents = 3; //We should let the user provide a value for this
-    private int sequence = 0; //Keep track of the request order for http 1.1 pipelining
+    private int sequence = 1; //Keep track of the request order for http 1.1 pipelining
     private final Queue<HTTPCarbonMessage> holdingQueue = new PriorityQueue<>(intialEventsHeld);
-    private int nextRequiredSequence = 0;
+    private int nextRequiredSequence = 1;
 
     public SourceHandler(ServerConnectorFuture serverConnectorFuture, String interfaceId, ChunkConfig chunkConfig,
                          KeepAliveConfig keepAliveConfig, String serverName, ChannelGroup allChannels) {
@@ -138,7 +138,8 @@ public class SourceHandler extends ChannelInboundHandlerAdapter {
                 try {
                     inboundRequestMsg.addHttpContent(httpContent);
                     if (Util.isLastHttpContent(httpContent)) {
-                        inboundRequestMsg.setSequenceId(sequence++);
+                        inboundRequestMsg.setSequenceId(sequence);
+                        sequence++;
                         if (ctx.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get() == null) {
                             ctx.channel().attr(Constants.MAX_EVENTS_HELD).set(maximumEvents);
                         }
