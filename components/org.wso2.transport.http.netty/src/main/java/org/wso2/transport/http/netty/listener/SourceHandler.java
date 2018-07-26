@@ -149,9 +149,9 @@ public class SourceHandler extends ChannelInboundHandlerAdapter {
                         if (ctx.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get() == null) {
                             ctx.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextRequiredSequence);
                         }
-                        log.info("Inside source handler lasthttpcontent - message ID: " +
+                        /*log.info("Inside source handler lasthttpcontent - message ID: " +
                                 inboundRequestMsg.getHeaders().get("message-id") + " Current thread " +
-                                Thread.currentThread().getId() + " -Channel ID:" + ctx.channel().id());
+                                Thread.currentThread().getId() + " -Channel ID:" + ctx.channel().id());*/
                         if (handlerExecutor != null) {
                             handlerExecutor.executeAtSourceRequestSending(inboundRequestMsg);
                         }

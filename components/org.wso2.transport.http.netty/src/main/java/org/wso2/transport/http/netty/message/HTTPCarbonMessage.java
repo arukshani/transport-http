@@ -277,8 +277,8 @@ public class HTTPCarbonMessage implements Comparable<HTTPCarbonMessage> {
     }
 
     public HttpResponseFuture respond(HTTPCarbonMessage httpCarbonMessage) throws ServerConnectorException {
-        LOGGER.info("Inside Respond - message ID: " + httpCarbonMessage.getHeaders().get("message-id") +
-                " Current thread " + Thread.currentThread().getId());
+       /* LOGGER.info("Inside Respond - message ID: " + httpCarbonMessage.getHeaders().get("message-id") +
+                " Current thread " + Thread.currentThread().getId());*/
         httpOutboundRespFuture.notifyHttpListener(httpCarbonMessage);
         return httpOutboundRespStatusFuture;
     }
