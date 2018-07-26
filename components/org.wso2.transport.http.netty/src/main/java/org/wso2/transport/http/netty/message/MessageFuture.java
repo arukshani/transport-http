@@ -34,10 +34,10 @@ public class MessageFuture {
 
     private static final Logger log = LoggerFactory.getLogger(MessageFuture.class);
     private MessageListener messageListener;
-    private final HTTPCarbonMessage httpCarbonMessage;
+    private final HttpCarbonMessage httpCarbonMessage;
     private ChannelHandlerContext sourceContext;
 
-    public MessageFuture(HTTPCarbonMessage httpCarbonMessage) {
+    public MessageFuture(HttpCarbonMessage httpCarbonMessage) {
         this.httpCarbonMessage = httpCarbonMessage;
     }
 
@@ -47,7 +47,7 @@ public class MessageFuture {
 
         if (this.sourceContext != null) {
             Integer maxEventsHeld = this.sourceContext.channel().attr(Constants.MAX_EVENTS_HELD).get();
-            Queue<HTTPCarbonMessage> responseQueue = this.sourceContext.channel().attr(Constants.RESPONSE_QUEUE)
+            Queue<HttpCarbonMessage> responseQueue = this.sourceContext.channel().attr(Constants.RESPONSE_QUEUE)
                     .get();
             if (responseQueue != null) {
                 Integer nextSequenceNumber = this.sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
@@ -58,7 +58,7 @@ public class MessageFuture {
                 if (responseQueue.size() < maxEventsHeld) {
                     responseQueue.add(httpCarbonMessage);
                     while (!responseQueue.isEmpty()) {
-                        final HTTPCarbonMessage queuedPipelinedResponse = responseQueue.peek();
+                        final HttpCarbonMessage queuedPipelinedResponse = responseQueue.peek();
                         int currentSequenceNumber = queuedPipelinedResponse.getSequenceId();
                         if (currentSequenceNumber != 0) {
                             if (currentSequenceNumber != nextSequenceNumber) {
@@ -99,7 +99,7 @@ public class MessageFuture {
         }
     }
 
-    void sendMessageContent(HTTPCarbonMessage httpCarbonMessage) {
+    void sendMessageContent(HttpCarbonMessage httpCarbonMessage) {
         synchronized (httpCarbonMessage) {
             while (!httpCarbonMessage.isEmpty()) {
                 HttpContent httpContent = httpCarbonMessage.getHttpContent();

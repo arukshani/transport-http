@@ -18,7 +18,7 @@ package org.wso2.transport.http.netty.common;
 import io.netty.util.AttributeKey;
 import org.wso2.transport.http.netty.contract.HttpResponseFuture;
 import org.wso2.transport.http.netty.contractimpl.DefaultHttpClientConnector;
-import org.wso2.transport.http.netty.message.HTTPCarbonMessage;
+import org.wso2.transport.http.netty.message.HttpCarbonMessage;
 import org.wso2.transport.http.netty.sender.channel.TargetChannel;
 
 import java.util.Queue;
@@ -240,7 +240,7 @@ public final class Constants {
     public static final AttributeKey<Integer> REDIRECT_COUNT = AttributeKey.valueOf("REDIRECT_COUNT");
     public static final AttributeKey<String> RESOLVED_REQUESTED_URI_ATTR = AttributeKey
             .valueOf("RESOLVED_REQUESTED_URI_ATTR");
-    public static final AttributeKey<HTTPCarbonMessage> ORIGINAL_REQUEST = AttributeKey.valueOf("ORIGINAL_REQUEST");
+    public static final AttributeKey<HttpCarbonMessage> ORIGINAL_REQUEST = AttributeKey.valueOf("ORIGINAL_REQUEST");
     public static final AttributeKey<HttpResponseFuture> RESPONSE_FUTURE_OF_ORIGINAL_CHANNEL = AttributeKey
             .valueOf("RESPONSE_FUTURE_OF_ORIGINAL_CHANNEL");
     public static final AttributeKey<Long> ORIGINAL_CHANNEL_START_TIME = AttributeKey
@@ -253,7 +253,7 @@ public final class Constants {
             .valueOf("CLIENT_CONNECTOR");
 
     public static final AttributeKey<Integer> MAX_EVENTS_HELD = AttributeKey.valueOf("MAX_EVENTS_HELD");
-    public static final AttributeKey<Queue<HTTPCarbonMessage>> RESPONSE_QUEUE = AttributeKey.valueOf("RESPONSE_QUEUE");
+    public static final AttributeKey<Queue<HttpCarbonMessage>> RESPONSE_QUEUE = AttributeKey.valueOf("RESPONSE_QUEUE");
     public static final AttributeKey<Integer> NEXT_SEQUENCE_NUMBER = AttributeKey.valueOf("NEXT_SEQUENCE_NUMBER");
 
     public static final int REDIRECT_SEE_OTHER_303 = 303;
