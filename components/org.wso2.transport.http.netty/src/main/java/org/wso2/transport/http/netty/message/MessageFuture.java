@@ -23,9 +23,8 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.wso2.transport.http.netty.common.Constants;
-
-import java.util.Queue;
+import org.wso2.transport.http.netty.contractimpl.HttpOutboundRespListener;
+import org.wso2.transport.http.netty.listener.PipeliningHandler;
 
 /**
  * Represents future contents of the message.
@@ -45,74 +44,27 @@ public class MessageFuture {
 
         this.messageListener = messageListener;
 
-        if (this.sourceContext != null) {
-            Integer maxEventsHeld = this.sourceContext.channel().attr(Constants.MAX_EVENTS_HELD).get();
-            Queue<HttpCarbonMessage> responseQueue = this.sourceContext.channel().attr(Constants.RESPONSE_QUEUE)
-                    .get();
-            if (responseQueue != null) {
-                Integer nextSequenceNumber = this.sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
-                /*log.info("MaxEventsHeld : " + maxEventsHeld + " size-response-queue : " + responseQueue.size() +
-                        " next-sequence-number: " + nextSequenceNumber + " -Channel ID:" + sourceContext.channel()
-                        .id());*/
-
-                if (responseQueue.size() < maxEventsHeld) {
-                    responseQueue.add(httpCarbonMessage);
-                    while (!responseQueue.isEmpty()) {
-                        final HttpCarbonMessage queuedPipelinedResponse = responseQueue.peek();
-                        int currentSequenceNumber = queuedPipelinedResponse.getSequenceId();
-                        if (currentSequenceNumber != 0) {
-                            if (currentSequenceNumber != nextSequenceNumber) {
-                                break;
-                            }
-                            responseQueue.remove();
-                            synchronized (queuedPipelinedResponse) {
-                                while (!queuedPipelinedResponse.isEmpty()) {
-                                    //Notify the correct listener related to currently executing message
-                                    //notifyMessageListener(httpContent);
-                                    if (queuedPipelinedResponse.getMessageFuture() != null &&
-                                            queuedPipelinedResponse.getMessageFuture().isMessageListenerSet()) {
-                                        HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
-                                        queuedPipelinedResponse.getMessageFuture().notifyMessageListener(httpContent);
-                                        if (httpContent instanceof LastHttpContent) {
-                                            nextSequenceNumber++;
-                                            this.sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER)
-                                                    .set(nextSequenceNumber);
-                                            queuedPipelinedResponse.removeMessageFuture();
-                                        }
-                                    }
-                                }
-                            }
-                        } else { //No queuing needed since this has not come from source handler
-                            responseQueue.remove();
-                            sendMessageContent(httpCarbonMessage);
-                        }
-                    }
-                } else {
-                    //Cannot queue up indefinitely which might cause out of memory issues, so closing the connection
-                    this.sourceContext.close();
-                }
+        synchronized (httpCarbonMessage) {
+            if (httpCarbonMessage.getSequenceId() != 0 && messageListener instanceof HttpOutboundRespListener) {
+                new PipeliningHandler(sourceContext, this, httpCarbonMessage).pipelineResponse();
             } else {
                 sendMessageContent(httpCarbonMessage);
             }
-        } else {
-            sendMessageContent(httpCarbonMessage);
         }
     }
 
-    void sendMessageContent(HttpCarbonMessage httpCarbonMessage) {
-        synchronized (httpCarbonMessage) {
-            while (!httpCarbonMessage.isEmpty()) {
-                HttpContent httpContent = httpCarbonMessage.getHttpContent();
-                notifyMessageListener(httpContent);
-                if (httpContent instanceof LastHttpContent) {
-                    httpCarbonMessage.removeMessageFuture();
-                    return;
-                }
+    public void sendMessageContent(HttpCarbonMessage httpCarbonMessage) {
+        while (!httpCarbonMessage.isEmpty()) {
+            HttpContent httpContent = httpCarbonMessage.getHttpContent();
+            notifyMessageListener(httpContent);
+            if (httpContent instanceof LastHttpContent) {
+                httpCarbonMessage.removeMessageFuture();
+                return;
             }
         }
     }
 
-    void notifyMessageListener(HttpContent httpContent) {
+    public void notifyMessageListener(HttpContent httpContent) {
         if (this.messageListener != null) {
             this.messageListener.onMessage(httpContent);
         } else {
