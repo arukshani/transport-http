@@ -11,6 +11,9 @@ import org.wso2.transport.http.netty.message.MessageFuture;
 
 import java.util.Queue;
 
+/**
+ * Handle responses to pipeline requests.
+ */
 public class PipeliningHandler {
     private static final Logger log = LoggerFactory.getLogger(PipeliningHandler.class);
 
