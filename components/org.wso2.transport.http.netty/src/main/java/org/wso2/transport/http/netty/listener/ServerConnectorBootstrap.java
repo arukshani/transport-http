@@ -176,10 +176,11 @@ public class ServerConnectorBootstrap {
         @Override
         public ServerConnectorFuture start() {
             channelFuture = bindInterface();
+            log.info("Just after server host and port bound: " + Thread.currentThread().getId() + "-" + Thread.currentThread().getName());
             serverConnectorFuture = new HttpWsServerConnectorFuture(channelFuture, allChannels);
             channelFuture.addListener(future -> {
                 if (future.isSuccess()) {
-                    log.info("HTTP(S) Interface starting on host {} and port {}", getPort(), getPort());
+                    log.info("HTTP(S) Interface starting on host {} and port {}", getPort(), getPort() + Thread.currentThread().getId() + "-" + Thread.currentThread().getName());
                     serverConnectorFuture.notifyPortBindingEvent(this.connectorID, isHttps);
                 } else {
                     serverConnectorFuture.notifyPortBindingError(future.cause());
