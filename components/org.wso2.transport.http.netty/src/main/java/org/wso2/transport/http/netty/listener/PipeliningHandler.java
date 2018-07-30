@@ -105,6 +105,7 @@ public class PipeliningHandler {
      */
     private void sendQueuedResponse(ChannelHandlerContext sourceContext, Integer nextSequenceNumber,
                                     HttpCarbonMessage queuedPipelinedResponse) {
+        //IMPORTANT: MessageFuture will return null, if the intrinsic lock is already acquired.
         if (queuedPipelinedResponse.getMessageFuture() != null &&
                 queuedPipelinedResponse.getMessageFuture().isMessageListenerSet()) {
             HttpContent httpContent = queuedPipelinedResponse.getHttpContent();

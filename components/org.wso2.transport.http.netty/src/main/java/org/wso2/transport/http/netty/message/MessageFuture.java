@@ -23,7 +23,6 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.wso2.transport.http.netty.contractimpl.HttpOutboundRespListener;
 import org.wso2.transport.http.netty.listener.PipeliningHandler;
 
 import static org.wso2.transport.http.netty.common.Constants.RESPONSE_QUEUING_NOT_NEEDED;
@@ -45,29 +44,25 @@ public class MessageFuture {
     public void setMessageListener(MessageListener messageListener) {
         synchronized (httpCarbonMessage) {
             this.messageListener = messageListener;
+            writeHttpContent(this.httpCarbonMessage);
+        }
+    }
+
+    //IMPORTANT: This should only be called from HttpOutboundRespListener and do not synchronize this whole method
+    // with the current carbon message because the actual message that will be sent might or might not be the
+    // current message.
+    public void setResponseMessageListener(MessageListener messageListener) {
+        this.messageListener = messageListener;
+        if (httpCarbonMessage.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED) {
+            new PipeliningHandler().pipelineResponse(sourceContext, this, httpCarbonMessage);
+        } else {
             sendMessageContent(httpCarbonMessage);
         }
     }
 
-    public void setResponseMessageListener(MessageListener messageListener) {
-        synchronized (httpCarbonMessage) {
-            this.messageListener = messageListener;
-            if (httpCarbonMessage.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED) {
-                new PipeliningHandler().pipelineResponse(sourceContext, this, httpCarbonMessage);
-            } else {
-                sendMessageContent(httpCarbonMessage);
-            }
-        }
-    }
-
     public void sendMessageContent(HttpCarbonMessage httpCarbonMessage) {
-        while (!httpCarbonMessage.isEmpty()) {
-            HttpContent httpContent = httpCarbonMessage.getHttpContent();
-            notifyMessageListener(httpContent);
-            if (httpContent instanceof LastHttpContent) {
-                httpCarbonMessage.removeMessageFuture();
-                return;
-            }
+        synchronized (httpCarbonMessage) {
+           writeHttpContent(httpCarbonMessage);
         }
     }
 
@@ -76,6 +71,17 @@ public class MessageFuture {
             this.messageListener.onMessage(httpContent);
         } else {
             log.error("The message chunk will be lost because the MessageListener is not set.");
+        }
+    }
+
+    private void writeHttpContent(HttpCarbonMessage httpCarbonMessage) {
+        while (!httpCarbonMessage.isEmpty()) {
+            HttpContent httpContent = httpCarbonMessage.getHttpContent();
+            notifyMessageListener(httpContent);
+            if (httpContent instanceof LastHttpContent) {
+                httpCarbonMessage.removeMessageFuture();
+                return;
+            }
         }
     }
 
