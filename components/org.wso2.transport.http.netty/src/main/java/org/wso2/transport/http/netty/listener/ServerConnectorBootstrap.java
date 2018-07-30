@@ -180,7 +180,7 @@ public class ServerConnectorBootstrap {
             serverConnectorFuture = new HttpWsServerConnectorFuture(channelFuture, allChannels);
             channelFuture.addListener(future -> {
                 if (future.isSuccess()) {
-                    log.info("HTTP(S) Interface starting on host {} and port {}", getPort(), getPort() + Thread.currentThread().getId() + "-" + Thread.currentThread().getName());
+                    log.info("HTTP(S) Interface starting on host {} and port {}", getHost(), getPort()  + " == "+ Thread.currentThread().getId() + "-" + Thread.currentThread().getName());
                     serverConnectorFuture.notifyPortBindingEvent(this.connectorID, isHttps);
                 } else {
                     serverConnectorFuture.notifyPortBindingError(future.cause());
