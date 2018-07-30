@@ -26,6 +26,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -33,16 +34,20 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.transport.http.netty.common.Constants;
+import org.wso2.transport.http.netty.contentaware.listeners.PipeliningRequestListener;
 
 import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * Http Client for testing.
@@ -158,6 +163,26 @@ public class HttpClient {
         return this.responseHandler.getHttpFullResponses();
     }
 
+    public LinkedList<FullHttpResponse> finishResponsesRandomly(PipeliningRequestListener requestListener) {
+        CountDownLatch latch = new CountDownLatch(5);
+        this.waitForConnectionClosureLatch = new CountDownLatch(5);
+        this.responseHandler.setLatch(latch);
+        this.responseHandler.setWaitForConnectionClosureLatch(this.waitForConnectionClosureLatch);
+
+        for (int i = 1; i < 6; i++) {
+            FullHttpRequest httpRequest = createHttpRequest("/messageid" + String.valueOf(i));
+            httpRequest.headers().set(HttpHeaderNames.HOST, host + ":" + port);
+            this.connectedChannel.writeAndFlush(httpRequest);
+        }
+
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            log.warn("Operation go interrupted before receiving the response");
+        }
+        return this.responseHandler.getHttpFullResponses();
+    }
+
     public boolean waitForChannelClose() {
         try {
             if (!this.waitForConnectionClosureLatch.await(5, TimeUnit.SECONDS)) {
@@ -168,5 +193,10 @@ public class HttpClient {
             return false;
         }
         return true;
+    }
+
+    private FullHttpRequest createHttpRequest(String uri) {
+        final FullHttpRequest httpRequest = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, uri);
+        return httpRequest;
     }
 }

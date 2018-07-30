@@ -257,6 +257,8 @@ public final class Constants {
     public static final AttributeKey<Queue<HttpCarbonMessage>> RESPONSE_QUEUE = AttributeKey.valueOf("RESPONSE_QUEUE");
     public static final AttributeKey<Integer> NEXT_SEQUENCE_NUMBER = AttributeKey.valueOf("NEXT_SEQUENCE_NUMBER");
 
+    public static final int EXPECTED_SEQUENCE_NUMBER = 1;
+    public static final int NUMBER_OF_INITIAL_EVENTS_HELD = 3;
     public static final int RESPONSE_QUEUING_NOT_NEEDED = 0;
     public static final int MEANINGFULLY_EQUAL = 0;
     public static final int NOT_MEANINGFULLY_EQUAL = 1;

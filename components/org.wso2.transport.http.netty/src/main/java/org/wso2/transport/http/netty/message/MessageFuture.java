@@ -43,12 +43,16 @@ public class MessageFuture {
     }
 
     public void setMessageListener(MessageListener messageListener) {
-
-        this.messageListener = messageListener;
-
         synchronized (httpCarbonMessage) {
-            if (httpCarbonMessage.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED &&
-                    messageListener instanceof HttpOutboundRespListener) {
+            this.messageListener = messageListener;
+            sendMessageContent(httpCarbonMessage);
+        }
+    }
+
+    public void setResponseMessageListener(MessageListener messageListener) {
+        synchronized (httpCarbonMessage) {
+            this.messageListener = messageListener;
+            if (httpCarbonMessage.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED) {
                 new PipeliningHandler().pipelineResponse(sourceContext, this, httpCarbonMessage);
             } else {
                 sendMessageContent(httpCarbonMessage);

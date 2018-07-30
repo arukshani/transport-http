@@ -110,7 +110,7 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
             boolean keepAlive = isKeepAlive();
             MessageFuture messageFuture = outboundResponseMsg.getHttpContentAsync();
             messageFuture.setSourceContext(this.sourceContext);
-            messageFuture.setMessageListener(httpContent ->
+            messageFuture.setResponseMessageListener(httpContent ->
                     this.sourceContext.channel().eventLoop().execute(() -> {
                         try {
                             writeOutboundResponse(outboundResponseMsg, keepAlive, httpContent);

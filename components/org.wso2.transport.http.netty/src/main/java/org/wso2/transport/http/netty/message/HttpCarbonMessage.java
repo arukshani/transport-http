@@ -29,8 +29,6 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.wso2.transport.http.netty.common.Constants;
 import org.wso2.transport.http.netty.contract.HttpResponseFuture;
 import org.wso2.transport.http.netty.contract.ServerConnectorException;
@@ -53,10 +51,6 @@ import static org.wso2.transport.http.netty.common.Constants.RESPONSE_QUEUING_NO
  * HTTP based representation for HttpCarbonMessage.
  */
 public class HttpCarbonMessage implements Comparable<HttpCarbonMessage> {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(HttpCarbonMessage.class);
-
-
 
     protected HttpMessage httpMessage;
     private EntityCollector blockingEntityCollector;
@@ -291,10 +285,6 @@ public class HttpCarbonMessage implements Comparable<HttpCarbonMessage> {
     }
 
     public HttpResponseFuture respond(HttpCarbonMessage httpCarbonMessage) throws ServerConnectorException {
-        /* LOGGER.info("Inside Respond - message ID: " + httpCarbonMessage.getHeaders().get("message-id") +
-                " Current thread " + Thread.currentThread().getId());*/
-
-
         httpOutboundRespFuture.notifyHttpListener(httpCarbonMessage);
         return httpOutboundRespStatusFuture;
     }
