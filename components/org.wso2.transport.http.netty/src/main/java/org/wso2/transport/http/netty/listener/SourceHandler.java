@@ -141,7 +141,7 @@ public class SourceHandler extends ChannelInboundHandlerAdapter {
                         inboundRequestMsg.setSequenceId(sequence);
                         sequence++;
                         if (ctx.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get() == null) {
-                            ctx.channel().attr(Constants.MAX_EVENTS_HELD).set(maximumEvents);
+                            ctx.channel().attr(Constants.MAX_RESPONSES_ALLOWED_TO_BE_QUEUED).set(maximumEvents);
                         }
                         if (ctx.channel().attr(Constants.RESPONSE_QUEUE).get() == null) {
                             ctx.channel().attr(Constants.RESPONSE_QUEUE).set(holdingQueue);

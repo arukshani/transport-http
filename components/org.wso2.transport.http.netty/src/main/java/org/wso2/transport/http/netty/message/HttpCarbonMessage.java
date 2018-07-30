@@ -45,6 +45,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import static org.wso2.transport.http.netty.common.Constants.MEANINGFULLY_EQUAL;
+import static org.wso2.transport.http.netty.common.Constants.NOT_MEANINGFULLY_EQUAL;
+import static org.wso2.transport.http.netty.common.Constants.RESPONSE_QUEUING_NOT_NEEDED;
+
 /**
  * HTTP based representation for HttpCarbonMessage.
  */
@@ -410,34 +414,26 @@ public class HttpCarbonMessage implements Comparable<HttpCarbonMessage> {
 
     @Override
     public int compareTo(HttpCarbonMessage other) {
-        if (this.sequenceId != 0) {
-            return this.sequenceId - other.getSequenceId();
+        if (this.sequenceId == RESPONSE_QUEUING_NOT_NEEDED) {
+            return this.equals(other) ? MEANINGFULLY_EQUAL : NOT_MEANINGFULLY_EQUAL;
         }
-        return this.equals(other) ? 0 : 1;
+        return this.sequenceId - other.getSequenceId();
     }
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof HttpCarbonMessage && compareTo((HttpCarbonMessage) obj) == 0;
+        if (this.sequenceId == RESPONSE_QUEUING_NOT_NEEDED) {
+            return super.equals(obj);
+        }
+        return obj instanceof HttpCarbonMessage && compareTo((HttpCarbonMessage) obj) == MEANINGFULLY_EQUAL;
     }
 
     @Override
     public int hashCode() {
-        int prime = 31;
-        //int result = 1;
-        //return prime * this.sequenceId;
-       /* if (this.sequenceId != 0) {
-            return prime * this.sequenceId;
-        }
-        synchronized (this) {
-            result = prime * result + ((this.httpMessage == null) ? 0 : this.httpMessage.hashCode());
-            return result;
-        }*/
-        if (this.sequenceId != 0) {
-            return Objects.hashCode(sequenceId);
-        } else {
+        if (this.sequenceId == RESPONSE_QUEUING_NOT_NEEDED) {
             return super.hashCode();
         }
+        return Objects.hashCode(sequenceId);
     }
 
     public synchronized MessageFuture getMessageFuture() {

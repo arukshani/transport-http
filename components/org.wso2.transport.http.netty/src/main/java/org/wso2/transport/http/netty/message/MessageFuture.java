@@ -26,6 +26,8 @@ import org.slf4j.LoggerFactory;
 import org.wso2.transport.http.netty.contractimpl.HttpOutboundRespListener;
 import org.wso2.transport.http.netty.listener.PipeliningHandler;
 
+import static org.wso2.transport.http.netty.common.Constants.RESPONSE_QUEUING_NOT_NEEDED;
+
 /**
  * Represents future contents of the message.
  */
@@ -45,8 +47,9 @@ public class MessageFuture {
         this.messageListener = messageListener;
 
         synchronized (httpCarbonMessage) {
-            if (httpCarbonMessage.getSequenceId() != 0 && messageListener instanceof HttpOutboundRespListener) {
-                new PipeliningHandler(sourceContext, this, httpCarbonMessage).pipelineResponse();
+            if (httpCarbonMessage.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED &&
+                    messageListener instanceof HttpOutboundRespListener) {
+                new PipeliningHandler().pipelineResponse(sourceContext, this, httpCarbonMessage);
             } else {
                 sendMessageContent(httpCarbonMessage);
             }
@@ -80,7 +83,7 @@ public class MessageFuture {
         return this.httpCarbonMessage.getBlockingEntityCollector().getHttpContent();
     }
 
-    //IMPORTANT: Only set this when you want the requests to be pipelined. Not to be used with HTTP2.
+    //IMPORTANT: Only set this when you want the responses to be sent out in order. Not to be used with HTTP2.
     public void setSourceContext(ChannelHandlerContext sourceContext) {
         this.sourceContext = sourceContext;
     }

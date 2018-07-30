@@ -252,9 +252,14 @@ public final class Constants {
     public static final AttributeKey<DefaultHttpClientConnector> CLIENT_CONNECTOR = AttributeKey
             .valueOf("CLIENT_CONNECTOR");
 
-    public static final AttributeKey<Integer> MAX_EVENTS_HELD = AttributeKey.valueOf("MAX_EVENTS_HELD");
+    public static final AttributeKey<Integer> MAX_RESPONSES_ALLOWED_TO_BE_QUEUED =
+            AttributeKey.valueOf("MAX_RESPONSES_ALLOWED_TO_BE_QUEUED");
     public static final AttributeKey<Queue<HttpCarbonMessage>> RESPONSE_QUEUE = AttributeKey.valueOf("RESPONSE_QUEUE");
     public static final AttributeKey<Integer> NEXT_SEQUENCE_NUMBER = AttributeKey.valueOf("NEXT_SEQUENCE_NUMBER");
+
+    public static final int RESPONSE_QUEUING_NOT_NEEDED = 0;
+    public static final int MEANINGFULLY_EQUAL = 0;
+    public static final int NOT_MEANINGFULLY_EQUAL = 1;
 
     public static final int REDIRECT_SEE_OTHER_303 = 303;
 

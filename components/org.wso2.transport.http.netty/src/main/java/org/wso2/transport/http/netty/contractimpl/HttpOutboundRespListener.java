@@ -108,17 +108,11 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
 
             resetOutboundListenerState();
             boolean keepAlive = isKeepAlive();
-            /*log.info("Inside response listener on message - message ID: " + outboundResponseMsg.getHeaders()
-                    .get("message-id") + " -Current thread " + Thread.currentThread().getId() + " -Channel ID:"
-                    + sourceContext.channel().id());*/
             MessageFuture messageFuture = outboundResponseMsg.getHttpContentAsync();
             messageFuture.setSourceContext(this.sourceContext);
             messageFuture.setMessageListener(httpContent ->
                     this.sourceContext.channel().eventLoop().execute(() -> {
                         try {
-                            /*log.info("Actual write started - message ID: " + outboundResponseMsg.getHeaders()
-                                    .get("message-id") + " -Current thread " + Thread.currentThread().getId() +
-                                    " -Channel ID:" + sourceContext.channel().id());*/
                             writeOutboundResponse(outboundResponseMsg, keepAlive, httpContent);
                         } catch (Exception exception) {
                             String errorMsg = "Failed to send the outbound response : "
