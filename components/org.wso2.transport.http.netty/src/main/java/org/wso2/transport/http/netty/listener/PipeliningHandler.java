@@ -42,17 +42,17 @@ public class PipeliningHandler {
      * @param messageFuture     Represents future contents of the message
      * @param httpCarbonMessage HTTP response that is ready to be sent out
      */
-    public void pipelineResponse(ChannelHandlerContext sourceContext, MessageFuture messageFuture,
+    public static void pipelineResponse(ChannelHandlerContext sourceContext, MessageFuture messageFuture,
                                  HttpCarbonMessage httpCarbonMessage) {
 
         if (sourceContext == null) {
-            messageFuture.sendMessageContent(httpCarbonMessage);
+            messageFuture.sendCurrentMessage();
             return;
         }
 
         Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
         if (responseQueue == null) {
-            messageFuture.sendMessageContent(httpCarbonMessage);
+            messageFuture.sendCurrentMessage();
             return;
         }
 
@@ -64,21 +64,20 @@ public class PipeliningHandler {
         }
 
         responseQueue.add(httpCarbonMessage);
-        handleQueuedResponses(sourceContext, messageFuture, httpCarbonMessage, responseQueue);
+        handleQueuedResponses(sourceContext, messageFuture, responseQueue);
     }
 
     /**
      * Check response order. If the current response does not match with the expected response, defer sending it out.
      *
-     * @param sourceContext     Represents netty channel handler context which belongs to source handler
-     * @param messageFuture     Represents future contents of the message
-     * @param httpCarbonMessage HTTP response that is ready to be sent out
-     * @param responseQueue     Response queue that maintains the response order
+     * @param sourceContext Represents netty channel handler context which belongs to source handler
+     * @param messageFuture Represents future contents of the message
+     * @param responseQueue Response queue that maintains the response order
      */
-    private void handleQueuedResponses(ChannelHandlerContext sourceContext, MessageFuture messageFuture,
-                                       HttpCarbonMessage httpCarbonMessage, Queue<HttpCarbonMessage> responseQueue) {
-        Integer nextSequenceNumber = sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
+    private static void handleQueuedResponses(ChannelHandlerContext sourceContext, MessageFuture messageFuture,
+                                       Queue<HttpCarbonMessage> responseQueue) {
         while (!responseQueue.isEmpty()) {
+            Integer nextSequenceNumber = sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
             final HttpCarbonMessage queuedPipelinedResponse = responseQueue.peek();
             int currentSequenceNumber = queuedPipelinedResponse.getSequenceId();
             if (currentSequenceNumber != RESPONSE_QUEUING_NOT_NEEDED) {
@@ -86,12 +85,14 @@ public class PipeliningHandler {
                     break;
                 }
                 responseQueue.remove();
-                while (!queuedPipelinedResponse.isEmpty()) {
-                    sendQueuedResponse(sourceContext, nextSequenceNumber, queuedPipelinedResponse);
+                synchronized (queuedPipelinedResponse) {
+                    while (!queuedPipelinedResponse.isEmpty()) {
+                        sendQueuedResponse(sourceContext, nextSequenceNumber, queuedPipelinedResponse);
+                    }
                 }
             } else { //No queuing needed since this has not come from source handler
                 responseQueue.remove();
-                messageFuture.sendMessageContent(httpCarbonMessage);
+                messageFuture.sendCurrentMessage();
             }
         }
     }
@@ -103,14 +104,14 @@ public class PipeliningHandler {
      * @param nextSequenceNumber      Identify the next expected response
      * @param queuedPipelinedResponse Queued response that needs to be sent out
      */
-    private void sendQueuedResponse(ChannelHandlerContext sourceContext, Integer nextSequenceNumber,
+    private static void sendQueuedResponse(ChannelHandlerContext sourceContext, Integer nextSequenceNumber,
                                     HttpCarbonMessage queuedPipelinedResponse) {
-        //IMPORTANT: MessageFuture will return null, if the intrinsic lock is already acquired.
-        if (queuedPipelinedResponse.getMessageFuture() != null &&
-                queuedPipelinedResponse.getMessageFuture().isMessageListenerSet()) {
+        //IMPORTANT: MessageFuture will return null, if the intrinsic lock of the message is already acquired.
+        MessageFuture messageFuture = queuedPipelinedResponse.getMessageFuture();
+        if (messageFuture != null && messageFuture.isMessageListenerSet()) {
             HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
             //Notify the correct listener related to currently executing message
-            queuedPipelinedResponse.getMessageFuture().notifyMessageListener(httpContent);
+            messageFuture.notifyMessageListener(httpContent);
             if (httpContent instanceof LastHttpContent) {
                 nextSequenceNumber++;
                 sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);

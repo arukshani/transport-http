@@ -44,7 +44,6 @@ import org.wso2.transport.http.netty.message.Http2PushPromise;
 import org.wso2.transport.http.netty.message.HttpCarbonMessage;
 import org.wso2.transport.http.netty.message.MessageFuture;
 
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -120,7 +119,7 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
                             log.error(errorMsg, exception);
                             inboundRequestMsg.getHttpOutboundRespStatusFuture().notifyHttpListener(exception);
                         }
-                    }));
+                    }), keepAlive);
         });
     }
 
