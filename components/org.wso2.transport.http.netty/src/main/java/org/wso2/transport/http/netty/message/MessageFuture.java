@@ -23,9 +23,7 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.wso2.transport.http.netty.common.Constants;
-
-import java.util.Queue;
+import org.wso2.transport.http.netty.listener.PipeliningHandler;
 
 import static org.wso2.transport.http.netty.common.Constants.RESPONSE_QUEUING_NOT_NEEDED;
 
@@ -55,14 +53,12 @@ public class MessageFuture {
     // current message.
     public void setResponseMessageListener(MessageListener messageListener, boolean keepAlive) {
         if (keepAlive && httpCarbonMessage.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED) {
-           /* this.messageListener = messageListener;
-            PipeliningHandler.pipelineResponse(sourceContext, this, httpCarbonMessage);*/
+            this.messageListener = messageListener;
+            PipeliningHandler.pipelineResponse(sourceContext, this, httpCarbonMessage);
             /*synchronized (this.httpCarbonMessage) {
                 this.messageListener = messageListener;
                 writeHttpContent(this.httpCarbonMessage);
             }*/
-            this.messageListener = messageListener;
-            pipelineResponse(this.httpCarbonMessage);
         } else {
             synchronized (this.httpCarbonMessage) {
                 this.messageListener = messageListener;
@@ -72,7 +68,9 @@ public class MessageFuture {
     }
 
     public void sendCurrentMessage() {
-        writeHttpContent(this.httpCarbonMessage);
+        synchronized (this.httpCarbonMessage) {
+            writeHttpContent(this.httpCarbonMessage);
+        }
     }
 
     private void writeHttpContent(HttpCarbonMessage httpCarbonMessage) {
@@ -108,11 +106,11 @@ public class MessageFuture {
     }
 
 
-    /**
+  /*  *//**
      * Ensure responses are served in the same order as their corresponding requests.
      *
      * @param httpCarbonMessage HTTP response that is ready to be sent out
-     */
+     *//*
     public void pipelineResponse(HttpCarbonMessage httpCarbonMessage) {
 
         if (sourceContext == null) {
@@ -137,11 +135,11 @@ public class MessageFuture {
         handleQueuedResponses(responseQueue);
     }
 
-    /**
+    *//**
      * Check response order. If the current response does not match with the expected response, defer sending it out.
      *
      * @param responseQueue Response queue that maintains the response order
-     */
+     *//*
     private void handleQueuedResponses(Queue<HttpCarbonMessage> responseQueue) {
         while (!responseQueue.isEmpty()) {
             Integer nextSequenceNumber = sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
@@ -163,12 +161,12 @@ public class MessageFuture {
         }
     }
 
-    /**
+    *//**
      * Send the queued response to its destination.
      *
      * @param nextSequenceNumber      Identify the next expected response
      * @param queuedPipelinedResponse Queued response that needs to be sent out
-     */
+     *//*
     private void sendQueuedResponse(Integer nextSequenceNumber,
                                     HttpCarbonMessage queuedPipelinedResponse) {
         //IMPORTANT: MessageFuture will return null, if the intrinsic lock of the message is already acquired.
@@ -183,5 +181,5 @@ public class MessageFuture {
                 queuedPipelinedResponse.removeMessageFuture();
             }
         }
-    }
+    }*/
 }

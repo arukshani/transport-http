@@ -63,6 +63,7 @@ public class PipeliningHandler {
             return;
         }
 
+        httpCarbonMessage.setPipelineResponseFuture(messageFuture);
         responseQueue.add(httpCarbonMessage);
         handleQueuedResponses(sourceContext, messageFuture, responseQueue);
     }
@@ -106,8 +107,7 @@ public class PipeliningHandler {
      */
     private static void sendQueuedResponse(ChannelHandlerContext sourceContext, Integer nextSequenceNumber,
                                     HttpCarbonMessage queuedPipelinedResponse) {
-        //IMPORTANT: MessageFuture will return null, if the intrinsic lock of the message is already acquired.
-        MessageFuture messageFuture = queuedPipelinedResponse.getMessageFuture();
+        MessageFuture messageFuture = queuedPipelinedResponse.getPipelineResponseFuture();
         if (messageFuture != null && messageFuture.isMessageListenerSet()) {
             HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
             //Notify the correct listener related to currently executing message
