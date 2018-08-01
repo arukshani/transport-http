@@ -55,10 +55,6 @@ public class MessageFuture {
         if (keepAlive && httpCarbonMessage.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED) {
             this.messageListener = messageListener;
             PipeliningHandler.pipelineResponse(sourceContext, this, httpCarbonMessage);
-            /*synchronized (this.httpCarbonMessage) {
-                this.messageListener = messageListener;
-                writeHttpContent(this.httpCarbonMessage);
-            }*/
         } else {
             synchronized (this.httpCarbonMessage) {
                 this.messageListener = messageListener;
@@ -104,82 +100,4 @@ public class MessageFuture {
     public void setSourceContext(ChannelHandlerContext sourceContext) {
         this.sourceContext = sourceContext;
     }
-
-
-  /*  *//**
-     * Ensure responses are served in the same order as their corresponding requests.
-     *
-     * @param httpCarbonMessage HTTP response that is ready to be sent out
-     *//*
-    public void pipelineResponse(HttpCarbonMessage httpCarbonMessage) {
-
-        if (sourceContext == null) {
-            sendCurrentMessage();
-            return;
-        }
-
-        Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
-        if (responseQueue == null) {
-            sendCurrentMessage();
-            return;
-        }
-
-        Integer maxQueuedResponses = sourceContext.channel().attr(Constants.MAX_RESPONSES_ALLOWED_TO_BE_QUEUED).get();
-        if (responseQueue.size() > maxQueuedResponses) {
-            //Cannot queue up indefinitely which might cause out of memory issues, so closing the connection
-            sourceContext.close();
-            return;
-        }
-
-        responseQueue.add(httpCarbonMessage);
-        handleQueuedResponses(responseQueue);
-    }
-
-    *//**
-     * Check response order. If the current response does not match with the expected response, defer sending it out.
-     *
-     * @param responseQueue Response queue that maintains the response order
-     *//*
-    private void handleQueuedResponses(Queue<HttpCarbonMessage> responseQueue) {
-        while (!responseQueue.isEmpty()) {
-            Integer nextSequenceNumber = sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
-            final HttpCarbonMessage queuedPipelinedResponse = responseQueue.peek();
-            int currentSequenceNumber = queuedPipelinedResponse.getSequenceId();
-            if (currentSequenceNumber != RESPONSE_QUEUING_NOT_NEEDED) {
-                if (currentSequenceNumber != nextSequenceNumber) {
-                    break;
-                }
-                responseQueue.remove();
-                while (!queuedPipelinedResponse.isEmpty()) {
-                    sendQueuedResponse(nextSequenceNumber, queuedPipelinedResponse);
-                }
-
-            } else { //No queuing needed since this has not come from source handler
-                responseQueue.remove();
-                sendCurrentMessage();
-            }
-        }
-    }
-
-    *//**
-     * Send the queued response to its destination.
-     *
-     * @param nextSequenceNumber      Identify the next expected response
-     * @param queuedPipelinedResponse Queued response that needs to be sent out
-     *//*
-    private void sendQueuedResponse(Integer nextSequenceNumber,
-                                    HttpCarbonMessage queuedPipelinedResponse) {
-        //IMPORTANT: MessageFuture will return null, if the intrinsic lock of the message is already acquired.
-        MessageFuture messageFuture = queuedPipelinedResponse.getMessageFuture();
-        if (messageFuture != null && messageFuture.isMessageListenerSet()) {
-            HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
-            //Notify the correct listener related to currently executing message
-            messageFuture.notifyMessageListener(httpContent);
-            if (httpContent instanceof LastHttpContent) {
-                nextSequenceNumber++;
-                sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);
-                queuedPipelinedResponse.removeMessageFuture();
-            }
-        }
-    }*/
 }
