@@ -48,7 +48,6 @@ import org.wso2.transport.http.netty.message.MessageFuture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.wso2.transport.http.netty.common.Constants.CHUNKING_CONFIG;
@@ -111,8 +110,8 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
             resetOutboundListenerState();
             boolean keepAlive = isKeepAlive();
             if (keepAlive && outboundResponseMsg.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED) {
-                MessageFuture messageFuture = outboundResponseMsg.getHttpContentAsync();
-                messageFuture.setPipelineListener(httpContent ->
+                MessageFuture pipelineFuture = outboundResponseMsg.getPipelineHttpContentAsync();
+                pipelineFuture.setPipelineListener(httpContent ->
                         this.sourceContext.channel().eventLoop().execute(() -> {
                             try {
                                 writeOutboundResponse(outboundResponseMsg, keepAlive, httpContent);

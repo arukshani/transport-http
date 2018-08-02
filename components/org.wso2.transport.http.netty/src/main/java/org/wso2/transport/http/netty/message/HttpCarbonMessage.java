@@ -58,6 +58,7 @@ public class HttpCarbonMessage implements Comparable<HttpCarbonMessage> {
     private int sequenceId;
 
     private MessageFuture messageFuture;
+    private MessageFuture pipelineFuture;
     private final ServerConnectorFuture httpOutboundRespFuture = new HttpWsServerConnectorFuture();
     private final DefaultHttpResponseFuture httpOutboundRespStatusFuture = new DefaultHttpResponseFuture();
     private final Observable contentObservable = new DefaultObservable();
@@ -426,7 +427,12 @@ public class HttpCarbonMessage implements Comparable<HttpCarbonMessage> {
         return Objects.hashCode(sequenceId);
     }
 
-    public synchronized MessageFuture getMessageFuture() {
-        return this.messageFuture;
+    public MessageFuture getPipelineFuture() {
+        return this.pipelineFuture;
+    }
+
+    public MessageFuture getPipelineHttpContentAsync() {
+        this.pipelineFuture = new MessageFuture(this);
+        return this.pipelineFuture;
     }
 }

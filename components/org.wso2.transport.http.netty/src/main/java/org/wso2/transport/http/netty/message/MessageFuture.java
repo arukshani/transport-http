@@ -31,6 +31,7 @@ public class MessageFuture {
 
     private static final Logger log = LoggerFactory.getLogger(MessageFuture.class);
     private MessageListener messageListener;
+    private MessageListener pipeliningListener;
     private final HttpCarbonMessage httpCarbonMessage;
     private ChannelHandlerContext sourceContext;
 
@@ -52,8 +53,8 @@ public class MessageFuture {
         }
     }
 
-    public void setPipelineListener(MessageListener messageListener) {
-        this.messageListener = messageListener;
+    public void setPipelineListener(MessageListener pipelineListener) {
+        this.pipeliningListener = pipelineListener;
     }
 
     public void notifyMessageListener(HttpContent httpContent) {
@@ -64,9 +65,22 @@ public class MessageFuture {
         }
     }
 
+    public void notifyPipeliningListener(HttpCarbonMessage pipelinedMessage, HttpContent httpContent) {
+        if (this.pipeliningListener != null) {
+            this.pipeliningListener.onMessage(httpContent);
+        } else {
+            log.error("The message chunk will be lost because the MessageListener is not set.");
+        }
+    }
+
     public boolean isMessageListenerSet() {
         return messageListener != null;
     }
+
+    public boolean isPipeliningListenerSet() {
+        return pipeliningListener != null;
+    }
+
 
     public synchronized HttpContent sync() {
         return this.httpCarbonMessage.getBlockingEntityCollector().getHttpContent();

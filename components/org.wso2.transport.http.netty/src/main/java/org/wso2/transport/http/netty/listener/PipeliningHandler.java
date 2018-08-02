@@ -87,9 +87,9 @@ public class PipeliningHandler {
                 if (currentSequenceNumber != nextSequenceNumber) {
                     break;
                 }
-                responseQueue.remove();
+//                responseQueue.remove();
                 while (!queuedPipelinedResponse.isEmpty()) {
-                    sendQueuedResponse(sourceContext, nextSequenceNumber, queuedPipelinedResponse);
+                    sendQueuedResponse(sourceContext, nextSequenceNumber, queuedPipelinedResponse, responseQueue);
                 }
 
             } else { //No queuing needed since this has not come from source handler
@@ -107,7 +107,7 @@ public class PipeliningHandler {
      * @param queuedPipelinedResponse Queued response that needs to be sent out
      */
     private static void sendQueuedResponse(ChannelHandlerContext sourceContext, Integer nextSequenceNumber,
-                                           HttpCarbonMessage queuedPipelinedResponse) {
+                                           HttpCarbonMessage queuedPipelinedResponse, Queue<HttpCarbonMessage> responseQueue) {
 
         //MessageFuture messageFuture = queuedPipelinedResponse.getMessageFuture();
         /*if (messageFuture != null && messageFuture.isMessageListenerSet()) {
@@ -121,17 +121,16 @@ public class PipeliningHandler {
             }
         }*/
 
-        MessageFuture messageFuture = queuedPipelinedResponse.getMessageFuture();
-        if (messageFuture != null && messageFuture.isMessageListenerSet()) {
+        MessageFuture pipelineFuture = queuedPipelinedResponse.getPipelineFuture();
+        if (pipelineFuture != null && pipelineFuture.isPipeliningListenerSet()) {
             HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
             //Notify the correct listener related to currently executing message
-            messageFuture.notifyMessageListener(httpContent);
+            pipelineFuture.notifyPipeliningListener(queuedPipelinedResponse, httpContent);
             if (httpContent instanceof LastHttpContent) {
                 nextSequenceNumber++;
                 sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);
-                queuedPipelinedResponse.removeMessageFuture();
+                responseQueue.remove();
             }
         }
-
     }
 }
