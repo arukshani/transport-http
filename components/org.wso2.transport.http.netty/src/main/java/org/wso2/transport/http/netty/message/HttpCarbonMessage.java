@@ -434,4 +434,8 @@ public class HttpCarbonMessage implements Comparable<HttpCarbonMessage> {
     public void setPipelineResponseFuture(MessageFuture pipelineResponseFuture) {
         this.pipelineResponseFuture = pipelineResponseFuture;
     }
+
+    public synchronized MessageFuture getMessageFuture() {
+        return this.messageFuture;
+    }
 }

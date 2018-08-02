@@ -23,9 +23,6 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.wso2.transport.http.netty.listener.PipeliningHandler;
-
-import static org.wso2.transport.http.netty.common.Constants.RESPONSE_QUEUING_NOT_NEEDED;
 
 /**
  * Represents future contents of the message.
@@ -41,46 +38,21 @@ public class MessageFuture {
         this.httpCarbonMessage = httpCarbonMessage;
     }
 
-    public void setMessageListener(MessageListener messageListener) {
+    public void setMessageListener(MessageListener messageListener, boolean pipeliningNeeded) {
         synchronized (httpCarbonMessage) {
             this.messageListener = messageListener;
-            writeHttpContent(this.httpCarbonMessage);
-        }
-    }
-
-    //IMPORTANT: This should only be called from HttpOutboundRespListener and do not synchronize this whole method
-    // with the current carbon message because the actual message that will be sent might or might not be the
-    // current message.
-    public void setResponseMessageListener(MessageListener messageListener, boolean keepAlive) {
-        if (keepAlive && httpCarbonMessage.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED) {
-            this.messageListener = messageListener;
-            PipeliningHandler.pipelineResponse(sourceContext, this, httpCarbonMessage);
-        } else {
-            synchronized (this.httpCarbonMessage) {
-                this.messageListener = messageListener;
-                writeHttpContent(this.httpCarbonMessage);
+            while (!httpCarbonMessage.isEmpty()) {
+                HttpContent httpContent = httpCarbonMessage.getHttpContent();
+                notifyMessageListener(httpContent);
+                if (httpContent instanceof LastHttpContent) {
+                    this.httpCarbonMessage.removeMessageFuture();
+                    return;
+                }
             }
         }
     }
 
-    public void sendCurrentMessage() {
-        synchronized (this.httpCarbonMessage) {
-            writeHttpContent(this.httpCarbonMessage);
-        }
-    }
-
-    private void writeHttpContent(HttpCarbonMessage httpCarbonMessage) {
-        while (!httpCarbonMessage.isEmpty()) {
-            HttpContent httpContent = httpCarbonMessage.getHttpContent();
-            notifyMessageListener(httpContent);
-            if (httpContent instanceof LastHttpContent) {
-                httpCarbonMessage.removeMessageFuture();
-                return;
-            }
-        }
-    }
-
-    public void notifyMessageListener(HttpContent httpContent) {
+    void notifyMessageListener(HttpContent httpContent) {
         if (this.messageListener != null) {
             this.messageListener.onMessage(httpContent);
         } else {
@@ -96,7 +68,6 @@ public class MessageFuture {
         return this.httpCarbonMessage.getBlockingEntityCollector().getHttpContent();
     }
 
-    //IMPORTANT: Only set this when you want the responses to be sent out in order. Not to be used with HTTP2.
     public void setSourceContext(ChannelHandlerContext sourceContext) {
         this.sourceContext = sourceContext;
     }

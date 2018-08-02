@@ -38,6 +38,7 @@ import org.wso2.transport.http.netty.contract.HttpConnectorListener;
 import org.wso2.transport.http.netty.contract.HttpResponseFuture;
 import org.wso2.transport.http.netty.internal.HandlerExecutor;
 import org.wso2.transport.http.netty.internal.HttpTransportContextHolder;
+import org.wso2.transport.http.netty.listener.PipeliningHandler;
 import org.wso2.transport.http.netty.listener.RequestDataHolder;
 import org.wso2.transport.http.netty.listener.SourceErrorHandler;
 import org.wso2.transport.http.netty.message.Http2PushPromise;
@@ -47,9 +48,11 @@ import org.wso2.transport.http.netty.message.MessageFuture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.wso2.transport.http.netty.common.Constants.CHUNKING_CONFIG;
+import static org.wso2.transport.http.netty.common.Constants.RESPONSE_QUEUING_NOT_NEEDED;
 import static org.wso2.transport.http.netty.common.SourceInteractiveState.RESPONSE_100_CONTINUE_SENT;
 import static org.wso2.transport.http.netty.common.SourceInteractiveState.SENDING_ENTITY_BODY;
 import static org.wso2.transport.http.netty.common.Util.createFullHttpResponse;
@@ -107,20 +110,29 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
 
             resetOutboundListenerState();
             boolean keepAlive = isKeepAlive();
-            MessageFuture messageFuture = outboundResponseMsg.getHttpContentAsync();
-            messageFuture.setSourceContext(this.sourceContext);
-            messageFuture.setResponseMessageListener(httpContent ->
-                    this.sourceContext.channel().eventLoop().execute(() -> {
-                        try {
-                            writeOutboundResponse(outboundResponseMsg, keepAlive, httpContent);
-                        } catch (Exception exception) {
-                            String errorMsg = "Failed to send the outbound response : "
-                                    + exception.getMessage().toLowerCase(Locale.ENGLISH);
-                            log.error(errorMsg, exception);
-                            inboundRequestMsg.getHttpOutboundRespStatusFuture().notifyHttpListener(exception);
-                        }
-                    }), keepAlive);
+            if (keepAlive && outboundResponseMsg.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED) {
+                //Handle pipelining
+                PipeliningHandler.pipelineResponse(sourceContext, this, outboundResponseMsg);
+            } else {
+                sendResponse(outboundResponseMsg, keepAlive, false);
+            }
         });
+    }
+
+    public void sendResponse(HttpCarbonMessage outboundResponseMsg, boolean keepAlive, boolean pipeliningNeeded) {
+        MessageFuture messageFuture = outboundResponseMsg.getHttpContentAsync();
+        messageFuture.setSourceContext(this.sourceContext);
+        messageFuture.setMessageListener(httpContent ->
+                this.sourceContext.channel().eventLoop().execute(() -> {
+                    try {
+                        writeOutboundResponse(outboundResponseMsg, keepAlive, httpContent);
+                    } catch (Exception exception) {
+                        String errorMsg = "Failed to send the outbound response : "
+                                + exception.getMessage().toLowerCase(Locale.ENGLISH);
+                        log.error(errorMsg, exception);
+                        inboundRequestMsg.getHttpOutboundRespStatusFuture().notifyHttpListener(exception);
+                    }
+                }), pipeliningNeeded);
     }
 
     @Override

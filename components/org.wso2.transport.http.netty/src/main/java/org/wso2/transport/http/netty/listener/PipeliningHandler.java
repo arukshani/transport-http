@@ -23,9 +23,11 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
 import org.wso2.transport.http.netty.common.Constants;
+import org.wso2.transport.http.netty.contractimpl.HttpOutboundRespListener;
 import org.wso2.transport.http.netty.message.HttpCarbonMessage;
 import org.wso2.transport.http.netty.message.MessageFuture;
 
+import java.util.Locale;
 import java.util.Queue;
 
 import static org.wso2.transport.http.netty.common.Constants.RESPONSE_QUEUING_NOT_NEEDED;
@@ -35,24 +37,26 @@ import static org.wso2.transport.http.netty.common.Constants.RESPONSE_QUEUING_NO
  */
 public class PipeliningHandler {
 
+    private static final boolean KEEP_ALIVE_TRUE = true;
+
     /**
      * Ensure responses are served in the same order as their corresponding requests.
      *
      * @param sourceContext     Represents netty channel handler context which belongs to source handler
-     * @param messageFuture     Represents future contents of the message
+     * @param respListener      Represents the outbound response listener
      * @param httpCarbonMessage HTTP response that is ready to be sent out
      */
-    public static void pipelineResponse(ChannelHandlerContext sourceContext, MessageFuture messageFuture,
-                                 HttpCarbonMessage httpCarbonMessage) {
+    public static void pipelineResponse(ChannelHandlerContext sourceContext, HttpOutboundRespListener respListener,
+                                        HttpCarbonMessage httpCarbonMessage) {
 
         if (sourceContext == null) {
-            messageFuture.sendCurrentMessage();
+            respListener.sendResponse(httpCarbonMessage, KEEP_ALIVE_TRUE);
             return;
         }
 
         Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
         if (responseQueue == null) {
-            messageFuture.sendCurrentMessage();
+            respListener.sendResponse(httpCarbonMessage, KEEP_ALIVE_TRUE);
             return;
         }
 
@@ -62,21 +66,20 @@ public class PipeliningHandler {
             sourceContext.close();
             return;
         }
-
-        httpCarbonMessage.setPipelineResponseFuture(messageFuture);
         responseQueue.add(httpCarbonMessage);
-        handleQueuedResponses(sourceContext, messageFuture, responseQueue);
+        handleQueuedResponses(sourceContext, respListener, responseQueue);
     }
 
     /**
      * Check response order. If the current response does not match with the expected response, defer sending it out.
      *
      * @param sourceContext Represents netty channel handler context which belongs to source handler
-     * @param messageFuture Represents future contents of the message
+     * @param respListener  Represents the outbound response listener
      * @param responseQueue Response queue that maintains the response order
      */
-    private static void handleQueuedResponses(ChannelHandlerContext sourceContext, MessageFuture messageFuture,
-                                       Queue<HttpCarbonMessage> responseQueue) {
+    private static void handleQueuedResponses(ChannelHandlerContext sourceContext,
+                                              HttpOutboundRespListener respListener,
+                                              Queue<HttpCarbonMessage> responseQueue) {
         while (!responseQueue.isEmpty()) {
             Integer nextSequenceNumber = sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
             final HttpCarbonMessage queuedPipelinedResponse = responseQueue.peek();
@@ -86,14 +89,13 @@ public class PipeliningHandler {
                     break;
                 }
                 responseQueue.remove();
-                synchronized (queuedPipelinedResponse) {
-                    while (!queuedPipelinedResponse.isEmpty()) {
-                        sendQueuedResponse(sourceContext, nextSequenceNumber, queuedPipelinedResponse);
-                    }
+                while (!queuedPipelinedResponse.isEmpty()) {
+                    sendQueuedResponse(sourceContext, nextSequenceNumber, queuedPipelinedResponse);
                 }
+
             } else { //No queuing needed since this has not come from source handler
                 responseQueue.remove();
-                messageFuture.sendCurrentMessage();
+                respListener.sendResponse(queuedPipelinedResponse, KEEP_ALIVE_TRUE);
             }
         }
     }
@@ -106,8 +108,12 @@ public class PipeliningHandler {
      * @param queuedPipelinedResponse Queued response that needs to be sent out
      */
     private static void sendQueuedResponse(ChannelHandlerContext sourceContext, Integer nextSequenceNumber,
-                                    HttpCarbonMessage queuedPipelinedResponse) {
-        MessageFuture messageFuture = queuedPipelinedResponse.getPipelineResponseFuture();
+                                           HttpCarbonMessage queuedPipelinedResponse) {
+
+
+
+
+       /* MessageFuture messageFuture = queuedPipelinedResponse.getMessageFuture();
         if (messageFuture != null && messageFuture.isMessageListenerSet()) {
             HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
             //Notify the correct listener related to currently executing message
@@ -117,6 +123,6 @@ public class PipeliningHandler {
                 sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);
                 queuedPipelinedResponse.removeMessageFuture();
             }
-        }
+        }*/
     }
 }
