@@ -38,7 +38,7 @@ public class MessageFuture {
         this.httpCarbonMessage = httpCarbonMessage;
     }
 
-    public void setMessageListener(MessageListener messageListener, boolean pipeliningNeeded) {
+    public void setMessageListener(MessageListener messageListener) {
         synchronized (httpCarbonMessage) {
             this.messageListener = messageListener;
             while (!httpCarbonMessage.isEmpty()) {
@@ -52,7 +52,11 @@ public class MessageFuture {
         }
     }
 
-    void notifyMessageListener(HttpContent httpContent) {
+    public void setPipelineListener(MessageListener messageListener) {
+        this.messageListener = messageListener;
+    }
+
+    public void notifyMessageListener(HttpContent httpContent) {
         if (this.messageListener != null) {
             this.messageListener.onMessage(httpContent);
         } else {

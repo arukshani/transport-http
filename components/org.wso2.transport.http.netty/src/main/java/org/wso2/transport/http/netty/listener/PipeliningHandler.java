@@ -27,7 +27,6 @@ import org.wso2.transport.http.netty.contractimpl.HttpOutboundRespListener;
 import org.wso2.transport.http.netty.message.HttpCarbonMessage;
 import org.wso2.transport.http.netty.message.MessageFuture;
 
-import java.util.Locale;
 import java.util.Queue;
 
 import static org.wso2.transport.http.netty.common.Constants.RESPONSE_QUEUING_NOT_NEEDED;
@@ -49,10 +48,10 @@ public class PipeliningHandler {
     public static void pipelineResponse(ChannelHandlerContext sourceContext, HttpOutboundRespListener respListener,
                                         HttpCarbonMessage httpCarbonMessage) {
 
-        if (sourceContext == null) {
-            respListener.sendResponse(httpCarbonMessage, KEEP_ALIVE_TRUE);
-            return;
-        }
+//        if (sourceContext == null) {
+//            respListener.sendResponse(httpCarbonMessage, KEEP_ALIVE_TRUE);
+//            return;
+//        }
 
         Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
         if (responseQueue == null) {
@@ -110,11 +109,8 @@ public class PipeliningHandler {
     private static void sendQueuedResponse(ChannelHandlerContext sourceContext, Integer nextSequenceNumber,
                                            HttpCarbonMessage queuedPipelinedResponse) {
 
-
-
-
-       /* MessageFuture messageFuture = queuedPipelinedResponse.getMessageFuture();
-        if (messageFuture != null && messageFuture.isMessageListenerSet()) {
+        //MessageFuture messageFuture = queuedPipelinedResponse.getMessageFuture();
+        /*if (messageFuture != null && messageFuture.isMessageListenerSet()) {
             HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
             //Notify the correct listener related to currently executing message
             messageFuture.notifyMessageListener(httpContent);
@@ -124,5 +120,18 @@ public class PipeliningHandler {
                 queuedPipelinedResponse.removeMessageFuture();
             }
         }*/
+
+        MessageFuture messageFuture = queuedPipelinedResponse.getMessageFuture();
+        if (messageFuture != null && messageFuture.isMessageListenerSet()) {
+            HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
+            //Notify the correct listener related to currently executing message
+            messageFuture.notifyMessageListener(httpContent);
+            if (httpContent instanceof LastHttpContent) {
+                nextSequenceNumber++;
+                sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);
+                queuedPipelinedResponse.removeMessageFuture();
+            }
+        }
+
     }
 }

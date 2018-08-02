@@ -111,17 +111,29 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
             resetOutboundListenerState();
             boolean keepAlive = isKeepAlive();
             if (keepAlive && outboundResponseMsg.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED) {
+                MessageFuture messageFuture = outboundResponseMsg.getHttpContentAsync();
+                messageFuture.setPipelineListener(httpContent ->
+                        this.sourceContext.channel().eventLoop().execute(() -> {
+                            try {
+                                writeOutboundResponse(outboundResponseMsg, keepAlive, httpContent);
+                            } catch (Exception exception) {
+                                String errorMsg = "Failed to send the outbound response : "
+                                        + exception.getMessage().toLowerCase(Locale.ENGLISH);
+                                log.error(errorMsg, exception);
+                                inboundRequestMsg.getHttpOutboundRespStatusFuture().notifyHttpListener(exception);
+                            }
+                        }));
                 //Handle pipelining
                 PipeliningHandler.pipelineResponse(sourceContext, this, outboundResponseMsg);
             } else {
-                sendResponse(outboundResponseMsg, keepAlive, false);
+                sendResponse(outboundResponseMsg, keepAlive);
             }
         });
     }
 
-    public void sendResponse(HttpCarbonMessage outboundResponseMsg, boolean keepAlive, boolean pipeliningNeeded) {
+    public void sendResponse(HttpCarbonMessage outboundResponseMsg, boolean keepAlive) {
         MessageFuture messageFuture = outboundResponseMsg.getHttpContentAsync();
-        messageFuture.setSourceContext(this.sourceContext);
+        //messageFuture.setSourceContext(this.sourceContext);
         messageFuture.setMessageListener(httpContent ->
                 this.sourceContext.channel().eventLoop().execute(() -> {
                     try {
@@ -132,7 +144,7 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
                         log.error(errorMsg, exception);
                         inboundRequestMsg.getHttpOutboundRespStatusFuture().notifyHttpListener(exception);
                     }
-                }), pipeliningNeeded);
+                }));
     }
 
     @Override
