@@ -23,6 +23,8 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.wso2.transport.http.netty.contractimpl.HttpOutboundRespListener;
+import org.wso2.transport.http.netty.listener.PipeliningHandler;
 
 /**
  * Represents future contents of the message.
@@ -31,7 +33,7 @@ public class MessageFuture {
 
     private static final Logger log = LoggerFactory.getLogger(MessageFuture.class);
     private MessageListener messageListener;
-    private MessageListener pipeliningListener;
+    private MessageListener contentWriteListener;
     private final HttpCarbonMessage httpCarbonMessage;
     private ChannelHandlerContext sourceContext;
 
@@ -53,8 +55,15 @@ public class MessageFuture {
         }
     }
 
-    public void setPipelineListener(MessageListener pipelineListener) {
-        this.pipeliningListener = pipelineListener;
+    public void setPipelineListener(MessageListener pipelineListener, HttpOutboundRespListener respListener) {
+        this.messageListener = pipelineListener;
+        PipeliningHandler.pipelineResponse(sourceContext, respListener, httpCarbonMessage);
+    }
+
+    public void setContentWriteListener( MessageListener contentWriteListener,
+                                         HttpOutboundRespListener respListener) {
+        this.contentWriteListener = contentWriteListener;
+        PipeliningHandler.handleQueuedResponses(sourceContext, respListener);
     }
 
     public void notifyMessageListener(HttpContent httpContent) {
@@ -65,9 +74,9 @@ public class MessageFuture {
         }
     }
 
-    public void notifyPipeliningListener(HttpCarbonMessage pipelinedMessage, HttpContent httpContent) {
-        if (this.pipeliningListener != null) {
-            this.pipeliningListener.onMessage(httpContent);
+    public void notifyContentWriteListener(HttpContent httpContent) {
+        if (this.contentWriteListener != null) {
+            this.contentWriteListener.onMessage(httpContent);
         } else {
             log.error("The message chunk will be lost because the MessageListener is not set.");
         }
@@ -77,8 +86,8 @@ public class MessageFuture {
         return messageListener != null;
     }
 
-    public boolean isPipeliningListenerSet() {
-        return pipeliningListener != null;
+    public boolean isContentWriteListenerSet() {
+        return contentWriteListener != null;
     }
 
 

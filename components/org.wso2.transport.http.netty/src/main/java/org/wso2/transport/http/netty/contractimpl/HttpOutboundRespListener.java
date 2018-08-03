@@ -48,6 +48,7 @@ import org.wso2.transport.http.netty.message.MessageFuture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.wso2.transport.http.netty.common.Constants.CHUNKING_CONFIG;
@@ -110,9 +111,19 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
             resetOutboundListenerState();
             boolean keepAlive = isKeepAlive();
             if (keepAlive && outboundResponseMsg.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED) {
-                MessageFuture pipelineFuture = outboundResponseMsg.getPipelineHttpContentAsync();
-                pipelineFuture.setPipelineListener(httpContent ->
+                MessageFuture messageFuture = outboundResponseMsg.getHttpContentAsync();
+                messageFuture.setSourceContext(sourceContext);
+                messageFuture.setPipelineListener(httpContent ->
                         this.sourceContext.channel().eventLoop().execute(() -> {
+                            //Handle pipelining
+                            outboundResponseMsg.addHttpContentBack(httpContent);
+                            PipeliningHandler.handleQueuedResponses(sourceContext, this);
+                        }),this);
+                MessageFuture writeFuture = outboundResponseMsg.getPipelineWriteAsync();
+                writeFuture.setSourceContext(sourceContext);
+                writeFuture.setContentWriteListener(httpContent ->
+                        this.sourceContext.channel().eventLoop().execute(() -> {
+
                             try {
                                 writeOutboundResponse(outboundResponseMsg, keepAlive, httpContent);
                             } catch (Exception exception) {
@@ -121,9 +132,9 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
                                 log.error(errorMsg, exception);
                                 inboundRequestMsg.getHttpOutboundRespStatusFuture().notifyHttpListener(exception);
                             }
-                        }));
-                //Handle pipelining
-                PipeliningHandler.pipelineResponse(sourceContext, this, outboundResponseMsg);
+
+                        }), this);
+
             } else {
                 sendResponse(outboundResponseMsg, keepAlive);
             }

@@ -66,7 +66,7 @@ public class PipeliningHandler {
             return;
         }
         responseQueue.add(httpCarbonMessage);
-        handleQueuedResponses(sourceContext, respListener, responseQueue);
+        //handleQueuedResponses(sourceContext, respListener, responseQueue);
     }
 
     /**
@@ -74,11 +74,10 @@ public class PipeliningHandler {
      *
      * @param sourceContext Represents netty channel handler context which belongs to source handler
      * @param respListener  Represents the outbound response listener
-     * @param responseQueue Response queue that maintains the response order
      */
-    private static void handleQueuedResponses(ChannelHandlerContext sourceContext,
-                                              HttpOutboundRespListener respListener,
-                                              Queue<HttpCarbonMessage> responseQueue) {
+    public static void handleQueuedResponses(ChannelHandlerContext sourceContext,
+                                             HttpOutboundRespListener respListener) {
+        Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
         while (!responseQueue.isEmpty()) {
             Integer nextSequenceNumber = sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
             final HttpCarbonMessage queuedPipelinedResponse = responseQueue.peek();
@@ -121,12 +120,18 @@ public class PipeliningHandler {
             }
         }*/
 
-        MessageFuture pipelineFuture = queuedPipelinedResponse.getPipelineFuture();
-        if (pipelineFuture != null && pipelineFuture.isPipeliningListenerSet()) {
+        MessageFuture writeFuture = queuedPipelinedResponse.getWriteFuture();
+
+        if (writeFuture != null && writeFuture.isContentWriteListenerSet()) {
             HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
             //Notify the correct listener related to currently executing message
-            pipelineFuture.notifyPipeliningListener(queuedPipelinedResponse, httpContent);
+            writeFuture.notifyContentWriteListener(httpContent);
             if (httpContent instanceof LastHttpContent) {
+                /*Integer nextSequenceNumber = sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
+                nextSequenceNumber++;
+                sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);
+                Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
+                responseQueue.remove();*/
                 nextSequenceNumber++;
                 sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);
                 responseQueue.remove();
