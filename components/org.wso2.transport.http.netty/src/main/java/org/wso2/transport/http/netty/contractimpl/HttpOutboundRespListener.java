@@ -44,6 +44,7 @@ import org.wso2.transport.http.netty.listener.SourceErrorHandler;
 import org.wso2.transport.http.netty.message.Http2PushPromise;
 import org.wso2.transport.http.netty.message.HttpCarbonMessage;
 import org.wso2.transport.http.netty.message.MessageFuture;
+import org.wso2.transport.http.netty.message.PipelineListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -113,12 +114,14 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
             if (keepAlive && outboundResponseMsg.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED) {
                 MessageFuture messageFuture = outboundResponseMsg.getHttpContentAsync();
                 messageFuture.setSourceContext(sourceContext);
-                messageFuture.setPipelineListener(httpContent ->
+               /* messageFuture.setPipelineListener(httpContent ->
                         this.sourceContext.channel().eventLoop().execute(() -> {
                             //Handle pipelining
                             outboundResponseMsg.addHttpContentBack(httpContent);
-                            PipeliningHandler.handleQueuedResponses(sourceContext, this);
-                        }),this);
+                            PipeliningHandler.handleQueuedResponses(sourceContext, this, outboundResponseMsg);
+                        }),this);*/
+                messageFuture.setPipelineListener(new PipelineListener(sourceContext, outboundResponseMsg, this), this);
+
                 MessageFuture writeFuture = outboundResponseMsg.getPipelineWriteAsync();
                 writeFuture.setSourceContext(sourceContext);
                 writeFuture.setContentWriteListener(httpContent ->

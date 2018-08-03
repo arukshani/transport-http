@@ -48,10 +48,10 @@ public class PipeliningHandler {
     public static void pipelineResponse(ChannelHandlerContext sourceContext, HttpOutboundRespListener respListener,
                                         HttpCarbonMessage httpCarbonMessage) {
 
-//        if (sourceContext == null) {
-//            respListener.sendResponse(httpCarbonMessage, KEEP_ALIVE_TRUE);
-//            return;
-//        }
+        if (sourceContext == null) {
+            respListener.sendResponse(httpCarbonMessage, KEEP_ALIVE_TRUE);
+            return;
+        }
 
         Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
         if (responseQueue == null) {
@@ -65,7 +65,9 @@ public class PipeliningHandler {
             sourceContext.close();
             return;
         }
-        responseQueue.add(httpCarbonMessage);
+        if (!responseQueue.contains(httpCarbonMessage)) {
+            responseQueue.add(httpCarbonMessage);
+        }
         //handleQueuedResponses(sourceContext, respListener, responseQueue);
     }
 
@@ -76,8 +78,12 @@ public class PipeliningHandler {
      * @param respListener  Represents the outbound response listener
      */
     public static void handleQueuedResponses(ChannelHandlerContext sourceContext,
-                                             HttpOutboundRespListener respListener) {
+                                             HttpOutboundRespListener respListener,
+                                             HttpCarbonMessage httpCarbonMessage) {
         Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
+        if (!responseQueue.contains(httpCarbonMessage)) {
+            responseQueue.add(httpCarbonMessage);
+        }
         while (!responseQueue.isEmpty()) {
             Integer nextSequenceNumber = sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
             final HttpCarbonMessage queuedPipelinedResponse = responseQueue.peek();
@@ -86,10 +92,15 @@ public class PipeliningHandler {
                 if (currentSequenceNumber != nextSequenceNumber) {
                     break;
                 }
-//                responseQueue.remove();
+
+                responseQueue.remove();
                 while (!queuedPipelinedResponse.isEmpty()) {
                     sendQueuedResponse(sourceContext, nextSequenceNumber, queuedPipelinedResponse, responseQueue);
                 }
+
+               /* if(queuedPipelinedResponse.isEmpty()) {
+                    responseQueue.remove();
+                }*/
 
             } else { //No queuing needed since this has not come from source handler
                 responseQueue.remove();
@@ -134,7 +145,9 @@ public class PipeliningHandler {
                 responseQueue.remove();*/
                 nextSequenceNumber++;
                 sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);
-                responseQueue.remove();
+                //responseQueue.remove();
+                sourceContext.channel().attr(Constants.RESPONSE_QUEUE).set(responseQueue);
+                queuedPipelinedResponse.removeMessageFuture();
             }
         }
     }
