@@ -93,6 +93,11 @@ public class PipeliningHandler {
                     break;
                 }
 
+                //Remove the piped response from the queue even if not all the content has been received. When there are
+                //delayed contents pipeline listener will trigger this method again with delayed content as the next runnable
+                // task queued added to the same IO thread. We do not have to worry about other responses getting executed before the
+                //delayed content because the nextSequence number will get updated only when the last http content of
+                // the delayed message has been received.
                 responseQueue.remove();
                 while (!queuedPipelinedResponse.isEmpty()) {
                     sendQueuedResponse(sourceContext, nextSequenceNumber, queuedPipelinedResponse, responseQueue);
