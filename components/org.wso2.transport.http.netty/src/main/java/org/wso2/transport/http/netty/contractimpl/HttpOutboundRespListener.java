@@ -38,7 +38,6 @@ import org.wso2.transport.http.netty.contract.HttpConnectorListener;
 import org.wso2.transport.http.netty.contract.HttpResponseFuture;
 import org.wso2.transport.http.netty.internal.HandlerExecutor;
 import org.wso2.transport.http.netty.internal.HttpTransportContextHolder;
-import org.wso2.transport.http.netty.listener.PipeliningHandler;
 import org.wso2.transport.http.netty.listener.RequestDataHolder;
 import org.wso2.transport.http.netty.listener.SourceErrorHandler;
 import org.wso2.transport.http.netty.message.Http2PushPromise;
@@ -49,7 +48,6 @@ import org.wso2.transport.http.netty.message.PipelineListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.wso2.transport.http.netty.common.Constants.CHUNKING_CONFIG;
@@ -159,6 +157,14 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
                     }
                 }));
     }
+
+  /*  public boolean pipeliningNeeded() {
+        String httpMethod = ((HttpRequest) this.inboundRequestMsg).method().toString();
+        if (httpMethod.equalsIgnoreCase("POST") || httpMethod.equalsIgnoreCase("PATCH")) {
+            return false;
+        }
+        return true;
+    }*/
 
     @Override
     public void onPushPromise(Http2PushPromise pushPromise) {
@@ -337,7 +343,13 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
         this.chunkConfig = chunkConfig;
     }
 
+    public boolean isContinueRequest() {
+        return continueRequest;
+    }
+
     private int incrementWriteCount(AtomicInteger writeCounter) {
         return writeCounter.incrementAndGet();
     }
+
+
 }

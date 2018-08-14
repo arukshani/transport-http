@@ -60,8 +60,8 @@ public class MessageFuture {
         PipeliningHandler.pipelineResponse(sourceContext, respListener, httpCarbonMessage);
     }
 
-    public void setContentWriteListener( MessageListener contentWriteListener,
-                                         HttpOutboundRespListener respListener) {
+    public void setContentWriteListener(MessageListener contentWriteListener,
+                                        HttpOutboundRespListener respListener) {
         this.contentWriteListener = contentWriteListener;
         PipeliningHandler.handleQueuedResponses(sourceContext, respListener, httpCarbonMessage);
     }

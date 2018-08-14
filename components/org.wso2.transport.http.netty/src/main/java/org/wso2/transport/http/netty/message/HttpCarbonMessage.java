@@ -427,11 +427,11 @@ public class HttpCarbonMessage implements Comparable<HttpCarbonMessage> {
         return Objects.hashCode(sequenceId);
     }
 
-    public synchronized MessageFuture getWriteFuture() {
+    public MessageFuture getWriteFuture() {
         return this.writeFuture;
     }
 
-    public synchronized MessageFuture getPipelineWriteAsync() {
+    public MessageFuture getPipelineWriteAsync() {
         this.writeFuture = new MessageFuture(this);
         return this.writeFuture;
     }

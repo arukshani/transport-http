@@ -48,16 +48,17 @@ public class PipeliningHandler {
     public static void pipelineResponse(ChannelHandlerContext sourceContext, HttpOutboundRespListener respListener,
                                         HttpCarbonMessage httpCarbonMessage) {
 
-        if (sourceContext == null) {
+        Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
+
+       /* if (sourceContext == null) {
             respListener.sendResponse(httpCarbonMessage, KEEP_ALIVE_TRUE);
             return;
         }
 
-        Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
         if (responseQueue == null) {
             respListener.sendResponse(httpCarbonMessage, KEEP_ALIVE_TRUE);
             return;
-        }
+        }*/
 
         Integer maxQueuedResponses = sourceContext.channel().attr(Constants.MAX_RESPONSES_ALLOWED_TO_BE_QUEUED).get();
         if (responseQueue.size() > maxQueuedResponses) {
@@ -94,18 +95,17 @@ public class PipeliningHandler {
                 }
 
                 //Remove the piped response from the queue even if not all the content has been received. When there are
-                //delayed contents pipeline listener will trigger this method again with delayed content as the next runnable
-                // task queued added to the same IO thread. We do not have to worry about other responses getting executed before the
+                //delayed contents pipeline listener will trigger this method again with delayed content as the next
+                // runnable
+                // task queued added to the same IO thread. We do not have to worry about other responses getting
+                // executed before the
                 //delayed content because the nextSequence number will get updated only when the last http content of
                 // the delayed message has been received.
                 responseQueue.remove();
                 while (!queuedPipelinedResponse.isEmpty()) {
-                    sendQueuedResponse(sourceContext, nextSequenceNumber, queuedPipelinedResponse, responseQueue);
+                    sendQueuedResponse(sourceContext, nextSequenceNumber, queuedPipelinedResponse, responseQueue,
+                            respListener);
                 }
-
-               /* if(queuedPipelinedResponse.isEmpty()) {
-                    responseQueue.remove();
-                }*/
 
             } else { //No queuing needed since this has not come from source handler
                 responseQueue.remove();
@@ -122,7 +122,8 @@ public class PipeliningHandler {
      * @param queuedPipelinedResponse Queued response that needs to be sent out
      */
     private static void sendQueuedResponse(ChannelHandlerContext sourceContext, Integer nextSequenceNumber,
-                                           HttpCarbonMessage queuedPipelinedResponse, Queue<HttpCarbonMessage> responseQueue) {
+                                           HttpCarbonMessage queuedPipelinedResponse, Queue<HttpCarbonMessage>
+                                                   responseQueue, HttpOutboundRespListener respListener) {
 
         //MessageFuture messageFuture = queuedPipelinedResponse.getMessageFuture();
         /*if (messageFuture != null && messageFuture.isMessageListenerSet()) {
@@ -148,10 +149,10 @@ public class PipeliningHandler {
                 sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);
                 Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
                 responseQueue.remove();*/
-                nextSequenceNumber++;
+                if (!respListener.isContinueRequest()) {
+                    nextSequenceNumber++;
+                }
                 sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);
-                //responseQueue.remove();
-                sourceContext.channel().attr(Constants.RESPONSE_QUEUE).set(responseQueue);
                 queuedPipelinedResponse.removeMessageFuture();
             }
         }
