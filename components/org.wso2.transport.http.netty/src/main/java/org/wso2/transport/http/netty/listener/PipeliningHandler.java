@@ -42,23 +42,11 @@ public class PipeliningHandler {
      * Ensure responses are served in the same order as their corresponding requests.
      *
      * @param sourceContext     Represents netty channel handler context which belongs to source handler
-     * @param respListener      Represents the outbound response listener
      * @param httpCarbonMessage HTTP response that is ready to be sent out
      */
-    public static void pipelineResponse(ChannelHandlerContext sourceContext, HttpOutboundRespListener respListener,
-                                        HttpCarbonMessage httpCarbonMessage) {
+    public static void pipelineResponse(ChannelHandlerContext sourceContext, HttpCarbonMessage httpCarbonMessage) {
 
         Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
-
-       /* if (sourceContext == null) {
-            respListener.sendResponse(httpCarbonMessage, KEEP_ALIVE_TRUE);
-            return;
-        }
-
-        if (responseQueue == null) {
-            respListener.sendResponse(httpCarbonMessage, KEEP_ALIVE_TRUE);
-            return;
-        }*/
 
         Integer maxQueuedResponses = sourceContext.channel().attr(Constants.MAX_RESPONSES_ALLOWED_TO_BE_QUEUED).get();
         if (responseQueue.size() > maxQueuedResponses) {
@@ -69,7 +57,6 @@ public class PipeliningHandler {
         if (!responseQueue.contains(httpCarbonMessage)) {
             responseQueue.add(httpCarbonMessage);
         }
-        //handleQueuedResponses(sourceContext, respListener, responseQueue);
     }
 
     /**
@@ -94,17 +81,14 @@ public class PipeliningHandler {
                     break;
                 }
 
-                //Remove the piped response from the queue even if not all the content has been received. When there are
-                //delayed contents pipeline listener will trigger this method again with delayed content as the next
-                // runnable
-                // task queued added to the same IO thread. We do not have to worry about other responses getting
-                // executed before the
-                //delayed content because the nextSequence number will get updated only when the last http content of
-                // the delayed message has been received.
+               /*Remove the piped response from the queue even if not all the content has been received. When there are
+                 delayed contents, pipeline listener will trigger this method again with delayed content as the next
+                 runnable task queued up in same IO thread. We do not have to worry about other responses
+                 getting executed before the delayed content because the nextSequence number will get updated
+                 only when the last http content of the delayed message has been received.*/
                 responseQueue.remove();
                 while (!queuedPipelinedResponse.isEmpty()) {
-                    sendQueuedResponse(sourceContext, nextSequenceNumber, queuedPipelinedResponse, responseQueue,
-                            respListener);
+                    sendQueuedResponse(sourceContext, nextSequenceNumber, queuedPipelinedResponse, respListener);
                 }
 
             } else { //No queuing needed since this has not come from source handler
@@ -122,20 +106,8 @@ public class PipeliningHandler {
      * @param queuedPipelinedResponse Queued response that needs to be sent out
      */
     private static void sendQueuedResponse(ChannelHandlerContext sourceContext, Integer nextSequenceNumber,
-                                           HttpCarbonMessage queuedPipelinedResponse, Queue<HttpCarbonMessage>
-                                                   responseQueue, HttpOutboundRespListener respListener) {
-
-        //MessageFuture messageFuture = queuedPipelinedResponse.getMessageFuture();
-        /*if (messageFuture != null && messageFuture.isMessageListenerSet()) {
-            HttpContent httpContent = queuedPipelinedResponse.getHttpContent();
-            //Notify the correct listener related to currently executing message
-            messageFuture.notifyMessageListener(httpContent);
-            if (httpContent instanceof LastHttpContent) {
-                nextSequenceNumber++;
-                sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);
-                queuedPipelinedResponse.removeMessageFuture();
-            }
-        }*/
+                                           HttpCarbonMessage queuedPipelinedResponse,
+                                           HttpOutboundRespListener respListener) {
 
         MessageFuture writeFuture = queuedPipelinedResponse.getWriteFuture();
 
@@ -144,11 +116,10 @@ public class PipeliningHandler {
             //Notify the correct listener related to currently executing message
             writeFuture.notifyContentWriteListener(httpContent);
             if (httpContent instanceof LastHttpContent) {
-                /*Integer nextSequenceNumber = sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).get();
-                nextSequenceNumber++;
-                sourceContext.channel().attr(Constants.NEXT_SEQUENCE_NUMBER).set(nextSequenceNumber);
-                Queue<HttpCarbonMessage> responseQueue = sourceContext.channel().attr(Constants.RESPONSE_QUEUE).get();
-                responseQueue.remove();*/
+                //If this is the 100 continue response do not increase the next sequence number since the actual
+                //response content still needs to be sent out via the same connection
+                //TODO:Response listener object might not belong to the currently executing response. Check whether
+                //it will cause issues
                 if (!respListener.isContinueRequest()) {
                     nextSequenceNumber++;
                 }

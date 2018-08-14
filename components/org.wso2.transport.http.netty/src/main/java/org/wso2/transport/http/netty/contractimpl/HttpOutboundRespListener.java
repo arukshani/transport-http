@@ -112,30 +112,14 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
             if (keepAlive && outboundResponseMsg.getSequenceId() != RESPONSE_QUEUING_NOT_NEEDED) {
                 MessageFuture messageFuture = outboundResponseMsg.getHttpContentAsync();
                 messageFuture.setSourceContext(sourceContext);
-               /* messageFuture.setPipelineListener(httpContent ->
-                        this.sourceContext.channel().eventLoop().execute(() -> {
-                            //Handle pipelining
-                            outboundResponseMsg.addHttpContentBack(httpContent);
-                            PipeliningHandler.handleQueuedResponses(sourceContext, this, outboundResponseMsg);
-                        }),this);*/
                 messageFuture.setPipelineListener(new PipelineListener(sourceContext, outboundResponseMsg, this), this);
 
                 MessageFuture writeFuture = outboundResponseMsg.getPipelineWriteAsync();
                 writeFuture.setSourceContext(sourceContext);
                 writeFuture.setContentWriteListener(httpContent ->
                         this.sourceContext.channel().eventLoop().execute(() -> {
-
-                            try {
-                                writeOutboundResponse(outboundResponseMsg, keepAlive, httpContent);
-                            } catch (Exception exception) {
-                                String errorMsg = "Failed to send the outbound response : "
-                                        + exception.getMessage().toLowerCase(Locale.ENGLISH);
-                                log.error(errorMsg, exception);
-                                inboundRequestMsg.getHttpOutboundRespStatusFuture().notifyHttpListener(exception);
-                            }
-
+                            writeResponseContent(outboundResponseMsg, keepAlive, httpContent);
                         }), this);
-
             } else {
                 sendResponse(outboundResponseMsg, keepAlive);
             }
@@ -144,27 +128,23 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
 
     public void sendResponse(HttpCarbonMessage outboundResponseMsg, boolean keepAlive) {
         MessageFuture messageFuture = outboundResponseMsg.getHttpContentAsync();
-        //messageFuture.setSourceContext(this.sourceContext);
         messageFuture.setMessageListener(httpContent ->
                 this.sourceContext.channel().eventLoop().execute(() -> {
-                    try {
-                        writeOutboundResponse(outboundResponseMsg, keepAlive, httpContent);
-                    } catch (Exception exception) {
-                        String errorMsg = "Failed to send the outbound response : "
-                                + exception.getMessage().toLowerCase(Locale.ENGLISH);
-                        log.error(errorMsg, exception);
-                        inboundRequestMsg.getHttpOutboundRespStatusFuture().notifyHttpListener(exception);
-                    }
+                    writeResponseContent(outboundResponseMsg, keepAlive, httpContent);
                 }));
     }
 
-  /*  public boolean pipeliningNeeded() {
-        String httpMethod = ((HttpRequest) this.inboundRequestMsg).method().toString();
-        if (httpMethod.equalsIgnoreCase("POST") || httpMethod.equalsIgnoreCase("PATCH")) {
-            return false;
+    private void writeResponseContent(HttpCarbonMessage outboundResponseMsg, boolean keepAlive,
+                                      HttpContent httpContent) {
+        try {
+            writeOutboundResponse(outboundResponseMsg, keepAlive, httpContent);
+        } catch (Exception exception) {
+            String errorMsg = "Failed to send the outbound response : "
+                    + exception.getMessage().toLowerCase(Locale.ENGLISH);
+            log.error(errorMsg, exception);
+            inboundRequestMsg.getHttpOutboundRespStatusFuture().notifyHttpListener(exception);
         }
-        return true;
-    }*/
+    }
 
     @Override
     public void onPushPromise(Http2PushPromise pushPromise) {

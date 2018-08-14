@@ -57,7 +57,7 @@ public class MessageFuture {
 
     public void setPipelineListener(MessageListener pipelineListener, HttpOutboundRespListener respListener) {
         this.messageListener = pipelineListener;
-        PipeliningHandler.pipelineResponse(sourceContext, respListener, httpCarbonMessage);
+        PipeliningHandler.pipelineResponse(sourceContext, httpCarbonMessage);
     }
 
     public void setContentWriteListener(MessageListener contentWriteListener,
