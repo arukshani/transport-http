@@ -182,7 +182,7 @@ public class SourceHandler extends ChannelInboundHandlerAdapter {
                 ServerConnectorFuture outboundRespFuture = httpRequestMsg.getHttpResponseFuture();
                 outboundRespFuture.setHttpConnectorListener(
                         new HttpOutboundRespListener(ctx, httpRequestMsg, chunkConfig, keepAliveConfig, serverName,
-                                sourceErrorHandler, continueRequest));
+                                                     sourceErrorHandler, continueRequest));
                 //Set the pipelining properties just before notifying the listener about the request for the first time
                 //because in case the response got ready before receiving the last HTTP content there's a possibility
                 //of seeing an incorrect sequence number
@@ -249,8 +249,7 @@ public class SourceHandler extends ChannelInboundHandlerAdapter {
         if (evt instanceof IdleStateEvent) {
             this.idleTimeout = true;
             boolean inCompleteRequest = sourceErrorHandler.getState() == RECEIVING_ENTITY_BODY;
-            ChannelFuture outboundRespFuture = sourceErrorHandler.handleIdleErrorScenario(inboundRequestMsg, ctx,
-                                                                                          (IdleStateEvent) evt);
+            ChannelFuture outboundRespFuture = sourceErrorHandler.handleIdleErrorScenario(inboundRequestMsg, ctx);
             if (outboundRespFuture == null) {
                 this.channelInactive(ctx);
             } else {
