@@ -104,6 +104,7 @@ public class HttpCarbonMessage implements Comparable<HttpCarbonMessage> {
             // for using the same message again, we need to set the future again and restart
             // the life-cycle.
             if (httpContent instanceof LastHttpContent) {
+                System.out.println("Last 2" + sequenceId);
                 removeMessageFuture();
             }
         } else {
@@ -111,6 +112,9 @@ public class HttpCarbonMessage implements Comparable<HttpCarbonMessage> {
                 blockingEntityCollector.addHttpContent(new DefaultLastHttpContent());
                 throw new RuntimeException(this.getIoException());
             } else {
+                if (httpContent instanceof LastHttpContent) {
+                    System.out.println("Last 1" + sequenceId);
+                }
                 blockingEntityCollector.addHttpContent(httpContent);
             }
         }
