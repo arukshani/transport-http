@@ -7,6 +7,6 @@ import io.netty.channel.ChannelHandlerContext;
  */
 public interface HttpPipelineListener {
 
-    void onResponseSend(ChannelHandlerContext channelHandlerContext);
+    void onLastHttpContentSent(ChannelHandlerContext channelHandlerContext);
 
 }

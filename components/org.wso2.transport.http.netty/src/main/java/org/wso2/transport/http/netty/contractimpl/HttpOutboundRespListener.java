@@ -195,7 +195,7 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
                             //This is needed because, if the other responses got ready before the nextSequenceNumber
                             // gets updated then the ballerina respond() won't start serializing the responses
                             // in queue. This is to trigger that process again.
-                            outboundResponseMsg.getPipelineListener().onResponseSend(sourceContext);
+                            outboundResponseMsg.getPipelineListener().onLastHttpContentSent(sourceContext);
                         }
                     }
                 }
