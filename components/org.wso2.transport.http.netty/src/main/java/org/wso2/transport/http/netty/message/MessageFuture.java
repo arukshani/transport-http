@@ -38,6 +38,7 @@ public class MessageFuture {
 
     public void setMessageListener(MessageListener messageListener) {
         synchronized (httpCarbonMessage) {
+            LOG.error("Inside set message listener 1 :" + Thread.currentThread().getName());
             this.messageListener = messageListener;
             while (!httpCarbonMessage.isEmpty()) {
                 HttpContent httpContent = httpCarbonMessage.getHttpContent();
@@ -52,6 +53,7 @@ public class MessageFuture {
 
     void notifyMessageListener(HttpContent httpContent) {
         if (this.messageListener != null) {
+            LOG.error("Notifying message listener from message future 2:" + Thread.currentThread().getName());
             this.messageListener.onMessage(httpContent);
         } else {
             LOG.error("The message chunk will be lost because the MessageListener is not set.");

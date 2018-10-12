@@ -74,8 +74,15 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
             if (handlerExecutor != null) {
                 handlerExecutor.executeAtSourceResponseReceiving(outboundResponseMsg);
             }
+            LOG.error("Sleep a little before setting the listener :" + Thread.currentThread().getName());
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            outboundResponseMsg.getHttpContentAsync().setMessageListener(httpContent -> {
+                LOG.error("About to hand over to write 3:" + Thread.currentThread().getName());
 
-            outboundResponseMsg.getHttpContentAsync().setMessageListener(httpContent ->
                     this.sourceContext.channel().eventLoop().execute(() -> {
                         try {
                             writeOutboundResponse(outboundResponseMsg, httpContent);
@@ -85,7 +92,8 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
                             LOG.error(errorMsg, exception);
                             inboundRequestMsg.getHttpOutboundRespStatusFuture().notifyHttpListener(exception);
                         }
-                    }));
+                    });
+            });
         });
     }
 
