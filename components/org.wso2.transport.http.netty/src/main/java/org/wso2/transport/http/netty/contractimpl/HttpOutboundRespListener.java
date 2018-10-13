@@ -89,7 +89,7 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
                     }));
         });*/
 
-        outboundResponseMsg.getHttpContentAsync().setDifferentListener(httpContent -> {
+        outboundResponseMsg.getHttpContentAsync().setMessageListener(httpContent -> {
                     OutboundMsgContainer msgContainer = new OutboundMsgContainer(messageStateContext,
                             this, outboundResponseMsg, httpContent);
                     sourceContext.channel().writeAndFlush(msgContainer);
