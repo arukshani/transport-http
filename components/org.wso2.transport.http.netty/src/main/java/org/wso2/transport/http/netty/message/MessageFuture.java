@@ -50,6 +50,12 @@ public class MessageFuture {
         }
     }
 
+    public void setDifferentListener(MessageListener messageListener) {
+        synchronized (httpCarbonMessage) {
+            this.messageListener = messageListener;
+        }
+    }
+
     void notifyMessageListener(HttpContent httpContent) {
         if (this.messageListener != null) {
             this.messageListener.onMessage(httpContent);

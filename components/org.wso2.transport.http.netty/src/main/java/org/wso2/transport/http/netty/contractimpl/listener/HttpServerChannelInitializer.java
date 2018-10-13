@@ -211,6 +211,7 @@ public class HttpServerChannelInitializer extends ChannelInitializer<SocketChann
                                new SourceHandler(this.serverConnectorFuture, this.interfaceId, this.chunkConfig,
                                                  keepAliveConfig, this.serverName, this.allChannels,
                                        this.pipeliningNeeded, this.pipeliningLimit));
+        serverPipeline.addLast("RespondHandler", new RespondHandler());
         if (socketIdleTimeout >= 0) {
             serverPipeline.addBefore(Constants.HTTP_SOURCE_HANDLER, Constants.IDLE_STATE_HANDLER,
                                      new IdleStateHandler(0, 0, socketIdleTimeout, TimeUnit.MILLISECONDS));

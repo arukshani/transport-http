@@ -33,6 +33,7 @@ import org.wso2.transport.http.netty.internal.HandlerExecutor;
 import org.wso2.transport.http.netty.internal.HttpTransportContextHolder;
 import org.wso2.transport.http.netty.message.Http2PushPromise;
 import org.wso2.transport.http.netty.message.HttpCarbonMessage;
+import org.wso2.transport.http.netty.message.OutboundMsgContainer;
 
 import java.util.Locale;
 
@@ -69,7 +70,7 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
 
     @Override
     public void onMessage(HttpCarbonMessage outboundResponseMsg) {
-        sourceContext.channel().eventLoop().execute(() -> {
+       /* sourceContext.channel().eventLoop().execute(() -> {
 
             if (handlerExecutor != null) {
                 handlerExecutor.executeAtSourceResponseReceiving(outboundResponseMsg);
@@ -86,7 +87,14 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
                             inboundRequestMsg.getHttpOutboundRespStatusFuture().notifyHttpListener(exception);
                         }
                     }));
-        });
+        });*/
+
+        outboundResponseMsg.getHttpContentAsync().setDifferentListener(httpContent -> {
+                    OutboundMsgContainer msgContainer = new OutboundMsgContainer(messageStateContext,
+                            this, outboundResponseMsg, httpContent);
+                    sourceContext.channel().writeAndFlush(msgContainer);
+                }
+               );
     }
 
     @Override
