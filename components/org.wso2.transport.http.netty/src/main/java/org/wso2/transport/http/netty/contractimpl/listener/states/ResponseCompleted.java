@@ -69,7 +69,7 @@ public class ResponseCompleted implements ListenerState {
     @Override
     public void writeOutboundResponseBody(HttpOutboundRespListener outboundRespListener,
                                           HttpCarbonMessage outboundResponseMsg, HttpContent httpContent) {
-        LOG.warn("writeOutboundResponseBody {}", ILLEGAL_STATE_ERROR);
+        LOG.warn("writeOutboundResponseBody {}", ILLEGAL_STATE_ERROR +  ":" + outboundResponseMsg.getSequenceId());
     }
 
     @Override

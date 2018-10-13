@@ -35,8 +35,6 @@ import org.wso2.transport.http.netty.message.Http2PushPromise;
 import org.wso2.transport.http.netty.message.HttpCarbonMessage;
 import org.wso2.transport.http.netty.message.OutboundMsgContainer;
 
-import java.util.Locale;
-
 import static org.wso2.transport.http.netty.contractimpl.common.Util.isKeepAliveConnection;
 
 /**
@@ -92,9 +90,11 @@ public class HttpOutboundRespListener implements HttpConnectorListener {
         outboundResponseMsg.getHttpContentAsync().setMessageListener(httpContent -> {
                     OutboundMsgContainer msgContainer = new OutboundMsgContainer(messageStateContext,
                             this, outboundResponseMsg, httpContent);
-                    sourceContext.channel().writeAndFlush(msgContainer);
+                    sourceContext.channel().eventLoop().execute(() -> {
+                        sourceContext.channel().writeAndFlush(msgContainer);
+                    });
                 }
-               );
+        );
     }
 
     @Override

@@ -19,6 +19,7 @@
 package org.wso2.transport.http.netty.message;
 
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,13 @@ public class MessageFuture {
             this.messageListener = messageListener;
             while (!httpCarbonMessage.isEmpty()) {
                 HttpContent httpContent = httpCarbonMessage.getHttpContent();
+                if (httpCarbonMessage.httpMessage instanceof HttpResponse) {
+                    if (httpContent instanceof LastHttpContent) {
+                        LOG.error("Writing from MF LastHttpContent: " + httpCarbonMessage.getSequenceId() + " Thread: " + Thread.currentThread().getName());
+                    } else {
+                        LOG.error("Writing from MF httpContent :" + httpCarbonMessage.getSequenceId()  + " Thread: " + Thread.currentThread().getName());
+                    }
+                }
                 notifyMessageListener(httpContent);
                 if (httpContent instanceof LastHttpContent) {
                     this.httpCarbonMessage.removeMessageFuture();
