@@ -208,7 +208,7 @@ public class HttpClientChannelInitializer extends ChannelInitializer<SocketChann
     private void configureHttp2UpgradePipeline(ChannelPipeline pipeline, HttpClientCodec sourceCodec,
                                                TargetHandler targetHandler) {
         pipeline.addLast(sourceCodec);
-        addCommonHandlers(pipeline);
+        addCommonHandlersForHttp2(pipeline);
         Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(http2ConnectionHandler);
         HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec,
                 Integer.MAX_VALUE);
@@ -224,6 +224,7 @@ public class HttpClientChannelInitializer extends ChannelInitializer<SocketChann
     private void configureHttp2Pipeline(ChannelPipeline pipeline) {
         pipeline.addLast(Constants.CONNECTION_HANDLER, http2ConnectionHandler);
         pipeline.addLast(Constants.HTTP2_TARGET_HANDLER, http2TargetHandler);
+      //  Comment this out and see
         pipeline.addLast(Constants.DECOMPRESSOR_HANDLER, new HttpContentDecompressor());
     }
 
@@ -246,6 +247,15 @@ public class HttpClientChannelInitializer extends ChannelInitializer<SocketChann
      * @param pipeline the client channel pipeline
      */
     private void addCommonHandlers(ChannelPipeline pipeline) {
+        pipeline.addLast(Constants.DECOMPRESSOR_HANDLER, new HttpContentDecompressor());
+        if (httpTraceLogEnabled) {
+            pipeline.addLast(Constants.HTTP_TRACE_LOG_HANDLER,
+                    new HttpTraceLoggingHandler(Constants.TRACE_LOG_UPSTREAM));
+        }
+    }
+
+    private void addCommonHandlersForHttp2(ChannelPipeline pipeline) {
+        //  Comment this out and see
         pipeline.addLast(Constants.DECOMPRESSOR_HANDLER, new HttpContentDecompressor());
         if (httpTraceLogEnabled) {
             pipeline.addLast(Constants.HTTP_TRACE_LOG_HANDLER,

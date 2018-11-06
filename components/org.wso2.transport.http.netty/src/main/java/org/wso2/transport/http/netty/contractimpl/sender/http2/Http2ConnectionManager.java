@@ -19,8 +19,11 @@
 package org.wso2.transport.http.netty.contractimpl.sender.http2;
 
 import io.netty.channel.Channel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.wso2.transport.http.netty.contract.config.SenderConfiguration;
 import org.wso2.transport.http.netty.contractimpl.common.HttpRoute;
+import org.wso2.transport.http.netty.contractimpl.sender.TargetHandler;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,6 +35,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * {@code Http2ConnectionManager} Manages HTTP/2 connections.
  */
 public class Http2ConnectionManager {
+    private static final Logger LOG = LoggerFactory.getLogger(Http2ConnectionManager.class);
 
     // Per route connection pools
     private static ConcurrentHashMap<String, PerRouteConnectionPool> connectionPools = new ConcurrentHashMap<>();
@@ -159,6 +163,7 @@ public class Http2ConnectionManager {
          * @return active TargetChannel
          */
         Http2ClientChannel fetchTargetChannel() {
+            LOG.warn("Size of HTTP2 client channels {}", http2ClientChannels.size());
             if (!http2ClientChannels.isEmpty()) {
                 Http2ClientChannel http2ClientChannel = http2ClientChannels.peek();
                 Channel channel = http2ClientChannel.getChannel();
@@ -168,7 +173,7 @@ public class Http2ConnectionManager {
                 }
                 // increment and get active stream count
                 int activeSteamCount = http2ClientChannel.incrementActiveStreamCount();
-
+                LOG.warn("Active stream count {}", activeSteamCount);
                 if (activeSteamCount < maxActiveStreams) {  // safe to fetch the Target Channel
                     return http2ClientChannel;
                 } else if (activeSteamCount == maxActiveStreams) {  // no more streams except this one can be opened
