@@ -165,7 +165,8 @@ public class HttpMessageDataStreamer {
             if (pooledByteBufAllocator == null) {
                 return Unpooled.buffer(CONTENT_BUFFER_SIZE);
             } else {
-                return pooledByteBufAllocator.directBuffer(CONTENT_BUFFER_SIZE);
+                return Unpooled.buffer(CONTENT_BUFFER_SIZE);
+                //return pooledByteBufAllocator.directBuffer(CONTENT_BUFFER_SIZE);
             }
         }
     }

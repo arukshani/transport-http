@@ -28,6 +28,7 @@ import io.netty.handler.codec.http2.EmptyHttp2Headers;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.Http2Stream;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
@@ -132,6 +133,9 @@ public class SendingEntityBody implements SenderState {
                 }
             }
             encoder.writeData(ctx, streamId, content, 0, endStream, ctx.newPromise());
+            Http2Stream stream = http2ClientChannel.getConnection().stream(streamId);
+//            LOG.warn("Before writing h2 content. Is channel writable {} stream writable {}",
+//                    http2ClientChannel.getChannel().isWritable(), encoder.flowController().isWritable(stream));
             encoder.flowController().writePendingBytes();
             ctx.flush();
             if (!trailers.isEmpty()) {

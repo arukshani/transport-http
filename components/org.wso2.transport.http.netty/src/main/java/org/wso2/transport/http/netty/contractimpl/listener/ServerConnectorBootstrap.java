@@ -19,9 +19,12 @@
 package org.wso2.transport.http.netty.contractimpl.listener;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
@@ -41,6 +44,7 @@ import org.wso2.transport.http.netty.contractimpl.common.ssl.SSLConfig;
 import org.wso2.transport.http.netty.contractimpl.common.ssl.SSLHandlerFactory;
 import org.wso2.transport.http.netty.internal.HandlerExecutor;
 import org.wso2.transport.http.netty.internal.HttpTransportContextHolder;
+import org.wso2.transport.http.netty.message.NettyRecvHeapAllocator;
 
 import java.net.InetSocketAddress;
 import javax.net.ssl.SSLContext;
@@ -84,6 +88,9 @@ public class ServerConnectorBootstrap {
         serverBootstrap.childOption(ChannelOption.TCP_NODELAY, serverBootstrapConfiguration.isTcpNoDelay());
         serverBootstrap.childOption(ChannelOption.SO_RCVBUF, serverBootstrapConfiguration.getReceiveBufferSize());
         serverBootstrap.childOption(ChannelOption.SO_SNDBUF, serverBootstrapConfiguration.getSendBufferSize());
+        serverBootstrap.option(ChannelOption.RCVBUF_ALLOCATOR, new NettyRecvHeapAllocator());
+       // serverBootstrap.option(ChannelOption.ALLOCATOR, new UnpooledByteBufAllocator(false));
+        //PreferHeapByteBufAllocator
 
         if (LOG.isDebugEnabled()) {
             LOG.debug(String.format("Netty Server Socket BACKLOG %d", serverBootstrapConfiguration.getSoBackLog()));

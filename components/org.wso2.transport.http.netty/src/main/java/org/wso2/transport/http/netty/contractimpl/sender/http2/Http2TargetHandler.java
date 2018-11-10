@@ -143,7 +143,7 @@ public class Http2TargetHandler extends ChannelDuplexHandler {
                     .setSenderState(new SendingHeaders(Http2TargetHandler.this, this));
             // Write Content
             httpOutboundRequest.getHttpContentAsync().setMessageListener(httpContent ->
-
+                    {
                     //Apply backpressure - content gate
                     http2ClientChannel.getChannel().eventLoop().execute(() -> {
                         try {
@@ -152,7 +152,7 @@ public class Http2TargetHandler extends ChannelDuplexHandler {
                             LOG.error("Failed to send the request : " + ex.getMessage(), ex);
                             outboundMsgHolder.getResponseFuture().notifyHttpListener(ex);
                         }
-                    }));
+                    });});
         }
 
         private void writeOutboundRequest(ChannelHandlerContext ctx, HttpContent msg) throws Http2Exception {
@@ -266,5 +266,11 @@ public class Http2TargetHandler extends ChannelDuplexHandler {
 
     private Http2MessageStateContext getHttp2MessageContext(OutboundMsgHolder outboundMsgHolder) {
         return outboundMsgHolder.getRequest().getHttp2MessageStateContext();
+    }
+
+    @Override
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+        LOG.warn("Is http2 target channel writability changed : {} for channel {}", ctx.channel().isWritable(),
+                ctx.channel().id());
     }
 }

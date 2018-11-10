@@ -16,9 +16,11 @@
 package org.wso2.transport.http.netty.contractimpl.sender.channel.pool;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.PreferHeapByteBufAllocator;
 import org.apache.commons.pool.PoolableObjectFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +30,7 @@ import org.wso2.transport.http.netty.contractimpl.sender.ConnectionAvailabilityF
 import org.wso2.transport.http.netty.contractimpl.sender.HttpClientChannelInitializer;
 import org.wso2.transport.http.netty.contractimpl.sender.channel.BootstrapConfiguration;
 import org.wso2.transport.http.netty.contractimpl.sender.channel.TargetChannel;
+import org.wso2.transport.http.netty.message.NettyRecvHeapAllocator;
 
 import java.net.InetSocketAddress;
 
@@ -135,6 +138,9 @@ public class PoolableTargetChannelFactory implements PoolableObjectFactory {
         clientBootstrap.option(ChannelOption.TCP_NODELAY, bootstrapConfiguration.isTcpNoDelay());
         clientBootstrap.option(ChannelOption.SO_REUSEADDR, bootstrapConfiguration.isSocketReuse());
         clientBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, bootstrapConfiguration.getConnectTimeOut());
+        //Set out own allocator
+        clientBootstrap.option(ChannelOption.RCVBUF_ALLOCATOR, new NettyRecvHeapAllocator());
+     //   clientBootstrap.option(ChannelOption.ALLOCATOR, new UnpooledByteBufAllocator(false));
         return clientBootstrap;
     }
 
