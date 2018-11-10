@@ -94,7 +94,7 @@ public class ClientFrameListener extends Http2EventAdapter {
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) {
-        LOG.warn("RST received on channel: {} for streamId: {} errorCode: {}", http2ClientChannel, streamId, errorCode);
+        //LOG.warn("RST received on channel: {} for streamId: {} errorCode: {}", http2ClientChannel, streamId, errorCode);
         Http2Reset http2Reset = new Http2Reset(streamId, Http2Error.valueOf(errorCode));
         ctx.fireChannelRead(http2Reset);
     }
@@ -125,11 +125,13 @@ public class ClientFrameListener extends Http2EventAdapter {
 
     @Override
     public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
+        debugData.release();
         http2ClientChannel.destroy();
     }
 
     @Override
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
+        debugData.release();
         http2ClientChannel.destroy();
     }
 

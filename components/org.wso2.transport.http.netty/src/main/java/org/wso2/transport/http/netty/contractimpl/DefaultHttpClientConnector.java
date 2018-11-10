@@ -161,7 +161,12 @@ public class DefaultHttpClientConnector implements HttpClientConnector {
                 if (activeHttp2ClientChannel != null) {
                     outboundMsgHolder.setHttp2ClientChannel(activeHttp2ClientChannel);
                     activeHttp2ClientChannel.getChannel().eventLoop().execute(
-                            () -> activeHttp2ClientChannel.getChannel().write(outboundMsgHolder));
+                            () -> {
+                                //Apply backpressure - Request gate
+
+                                activeHttp2ClientChannel.getChannel().write(outboundMsgHolder);
+
+                            });
                     httpResponseFuture = outboundMsgHolder.getResponseFuture();
                     httpResponseFuture.notifyResponseHandle(new ResponseHandle(outboundMsgHolder));
                     return httpResponseFuture;

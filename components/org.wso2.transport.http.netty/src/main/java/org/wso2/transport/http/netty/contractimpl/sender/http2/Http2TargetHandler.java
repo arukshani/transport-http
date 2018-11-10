@@ -143,6 +143,8 @@ public class Http2TargetHandler extends ChannelDuplexHandler {
                     .setSenderState(new SendingHeaders(Http2TargetHandler.this, this));
             // Write Content
             httpOutboundRequest.getHttpContentAsync().setMessageListener(httpContent ->
+
+                    //Apply backpressure - content gate
                     http2ClientChannel.getChannel().eventLoop().execute(() -> {
                         try {
                             writeOutboundRequest(ctx, httpContent);
