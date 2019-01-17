@@ -24,6 +24,7 @@ import org.wso2.transport.http.netty.contract.config.SenderConfiguration;
 import org.wso2.transport.http.netty.contract.config.ServerBootstrapConfiguration;
 import org.wso2.transport.http.netty.contract.websocket.WebSocketClientConnector;
 import org.wso2.transport.http.netty.contract.websocket.WebSocketClientConnectorConfig;
+import org.wso2.transport.http.netty.contractimpl.sender.channel.pool.HttpClientConnectionManager;
 
 import java.util.Map;
 
@@ -50,6 +51,10 @@ public interface HttpWsConnectorFactory {
      */
     HttpClientConnector createHttpClientConnector(Map<String, Object> transportProperties,
             SenderConfiguration senderConfiguration);
+
+    HttpClientConnector createHttpClientConnector(Map<String, Object> transportProperties,
+        SenderConfiguration senderConfiguration, HttpClientConnectionManager clientConnectionManager,
+        boolean useGlobalConfig);
 
     /**
      * This method is used to get WebSocket client connector.

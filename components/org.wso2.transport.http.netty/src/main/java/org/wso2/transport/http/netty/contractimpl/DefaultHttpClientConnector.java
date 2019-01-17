@@ -22,6 +22,7 @@ package org.wso2.transport.http.netty.contractimpl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -42,8 +43,10 @@ import org.wso2.transport.http.netty.contractimpl.common.HttpRoute;
 import org.wso2.transport.http.netty.contractimpl.common.ssl.SSLConfig;
 import org.wso2.transport.http.netty.contractimpl.listener.SourceHandler;
 import org.wso2.transport.http.netty.contractimpl.sender.ConnectionAvailabilityListener;
+import org.wso2.transport.http.netty.contractimpl.sender.channel.BootstrapConfiguration;
 import org.wso2.transport.http.netty.contractimpl.sender.channel.TargetChannel;
 import org.wso2.transport.http.netty.contractimpl.sender.channel.pool.ConnectionManager;
+import org.wso2.transport.http.netty.contractimpl.sender.channel.pool.HttpClientConnectionManager;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2ClientChannel;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2ConnectionManager;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.OutboundMsgHolder;
@@ -75,6 +78,10 @@ public class DefaultHttpClientConnector implements HttpClientConnector {
     private KeepAliveConfig keepAliveConfig;
     private boolean isHttp2;
     private ForwardedExtensionConfig forwardedExtensionConfig;
+    private HttpClientConnectionManager globalConnectionManager;
+    private boolean useGlobalConfig;
+    private BootstrapConfiguration bootstrapConfig;
+    private EventLoopGroup clientGroup;
 
     public DefaultHttpClientConnector(ConnectionManager connectionManager, SenderConfiguration senderConfiguration) {
         this.connectionManager = connectionManager;
@@ -84,6 +91,17 @@ public class DefaultHttpClientConnector implements HttpClientConnector {
         if (Float.valueOf(senderConfiguration.getHttpVersion()) == Constants.HTTP_2_0) {
             isHttp2 = true;
         }
+    }
+
+    public DefaultHttpClientConnector(HttpClientConnectionManager connectionManager, SenderConfiguration
+        senderConfiguration, boolean useGlobalConfig, BootstrapConfiguration bootstrapConfig, EventLoopGroup
+        clientGroup) {
+        this.senderConfiguration = senderConfiguration;
+        this.globalConnectionManager = connectionManager;
+        this.useGlobalConfig = useGlobalConfig;
+        this.bootstrapConfig = bootstrapConfig;
+        this.clientGroup = clientGroup;
+        initTargetChannelProperties(senderConfiguration);
     }
 
     @Override
@@ -135,6 +153,17 @@ public class DefaultHttpClientConnector implements HttpClientConnector {
     public HttpResponseFuture send(HttpCarbonMessage httpOutboundRequest) {
         OutboundMsgHolder outboundMsgHolder = new OutboundMsgHolder(httpOutboundRequest);
         return send(outboundMsgHolder, httpOutboundRequest);
+    }
+
+    @Override
+    public HttpResponseFuture sendMessage(HttpCarbonMessage httpOutboundRequest) {
+        OutboundMsgHolder outboundMsgHolder = new OutboundMsgHolder(httpOutboundRequest);
+        return sendMessage(outboundMsgHolder, httpOutboundRequest);
+    }
+
+    public HttpResponseFuture sendMessage(OutboundMsgHolder outboundMsgHolder, HttpCarbonMessage httpOutboundRequest) {
+
+        return null;
     }
 
     public HttpResponseFuture send(OutboundMsgHolder outboundMsgHolder, HttpCarbonMessage httpOutboundRequest) {
@@ -338,5 +367,9 @@ public class DefaultHttpClientConnector implements HttpClientConnector {
         httpOutboundRequest.setHeader(HttpHeaderNames.PROXY_AUTHORIZATION.toString(), authorization);
         authz.release();
         authzBase64.release();
+    }
+
+    public boolean isUseGlobalConfig() {
+        return useGlobalConfig;
     }
 }

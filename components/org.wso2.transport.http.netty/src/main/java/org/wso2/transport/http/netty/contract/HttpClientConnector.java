@@ -42,6 +42,8 @@ public interface HttpClientConnector {
      */
     HttpResponseFuture send(HttpCarbonMessage httpCarbonMessage);
 
+    HttpResponseFuture sendMessage(HttpCarbonMessage httpCarbonMessage);
+
     /**
      * Close the connection related to this connector.
      *
@@ -93,4 +95,6 @@ public interface HttpClientConnector {
      * @return returns the status of the asynchronous push response fetch action
      */
     HttpResponseFuture getPushResponse(Http2PushPromise pushPromise);
+
+    public boolean isUseGlobalConfig();
 }

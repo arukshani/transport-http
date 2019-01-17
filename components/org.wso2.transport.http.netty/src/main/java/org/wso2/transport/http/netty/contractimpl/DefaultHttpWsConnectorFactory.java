@@ -41,6 +41,7 @@ import org.wso2.transport.http.netty.contractimpl.common.ssl.SSLHandlerFactory;
 import org.wso2.transport.http.netty.contractimpl.listener.ServerConnectorBootstrap;
 import org.wso2.transport.http.netty.contractimpl.sender.channel.BootstrapConfiguration;
 import org.wso2.transport.http.netty.contractimpl.sender.channel.pool.ConnectionManager;
+import org.wso2.transport.http.netty.contractimpl.sender.channel.pool.HttpClientConnectionManager;
 import org.wso2.transport.http.netty.contractimpl.websocket.DefaultWebSocketClientConnector;
 
 import java.util.Map;
@@ -131,6 +132,16 @@ public class DefaultHttpWsConnectorFactory implements HttpWsConnectorFactory {
         BootstrapConfiguration bootstrapConfig = new BootstrapConfiguration(transportProperties);
         ConnectionManager connectionManager = new ConnectionManager(senderConfiguration, bootstrapConfig, clientGroup);
         return new DefaultHttpClientConnector(connectionManager, senderConfiguration);
+    }
+
+    @Override
+    public HttpClientConnector createHttpClientConnector(
+        Map<String, Object> transportProperties,
+        SenderConfiguration senderConfiguration, HttpClientConnectionManager clientConnectionManager,
+        boolean useGlobalConfig) {
+        BootstrapConfiguration bootstrapConfig = new BootstrapConfiguration(transportProperties);
+        return new DefaultHttpClientConnector(clientConnectionManager, senderConfiguration, useGlobalConfig,
+            bootstrapConfig, clientGroup);
     }
 
     @Override
