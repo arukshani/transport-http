@@ -37,6 +37,7 @@ import org.wso2.transport.http.netty.contractimpl.sender.ForwardedHeaderUpdater;
 import org.wso2.transport.http.netty.contractimpl.sender.HttpClientChannelInitializer;
 import org.wso2.transport.http.netty.contractimpl.sender.TargetHandler;
 import org.wso2.transport.http.netty.contractimpl.sender.channel.pool.ConnectionManager;
+import org.wso2.transport.http.netty.contractimpl.sender.channel.pool.HttpClientConnectionManager;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2ClientChannel;
 import org.wso2.transport.http.netty.contractimpl.sender.states.SendingHeaders;
 import org.wso2.transport.http.netty.internal.HandlerExecutor;
@@ -66,6 +67,7 @@ public class TargetChannel {
     private ChunkConfig chunkConfig;
     private HandlerExecutor handlerExecutor;
     private Http2ClientChannel http2ClientChannel;
+    private HttpClientConnectionManager globalConnectionManager;
 
     private final ConnectionAvailabilityFuture connectionAvailabilityFuture;
     private HttpResponseFuture httpInboundResponseFuture;
@@ -171,6 +173,10 @@ public class TargetChannel {
 
     public void setConnectionManager(ConnectionManager connectionManager) {
         this.connectionManager = connectionManager;
+    }
+
+    public void setConnectionManager(HttpClientConnectionManager connectionManager) {
+        this.globalConnectionManager = connectionManager;
     }
 
     public ChannelFuture getChannelFuture() {

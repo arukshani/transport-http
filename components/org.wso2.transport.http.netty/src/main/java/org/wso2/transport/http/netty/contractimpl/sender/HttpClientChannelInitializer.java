@@ -50,6 +50,7 @@ import org.wso2.transport.http.netty.contractimpl.common.ssl.SSLConfig;
 import org.wso2.transport.http.netty.contractimpl.common.ssl.SSLHandlerFactory;
 import org.wso2.transport.http.netty.contractimpl.listener.HttpTraceLoggingHandler;
 import org.wso2.transport.http.netty.contractimpl.sender.channel.pool.ConnectionManager;
+import org.wso2.transport.http.netty.contractimpl.sender.channel.pool.HttpClientConnectionManager;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.ClientFrameListener;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2ClientChannel;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2ConnectionManager;
@@ -88,6 +89,36 @@ public class HttpClientChannelInitializer extends ChannelInitializer<SocketChann
         this.keepAliveConfig = senderConfiguration.getKeepAliveConfig();
         this.proxyServerConfiguration = senderConfiguration.getProxyServerConfiguration();
         this.http2ConnectionManager = connectionManager.getHttp2ConnectionManager();
+        this.senderConfiguration = senderConfiguration;
+        this.httpRoute = httpRoute;
+        this.sslConfig = senderConfiguration.getClientSSLConfig();
+        this.connectionAvailabilityFuture = connectionAvailabilityFuture;
+
+        String httpVersion = senderConfiguration.getHttpVersion();
+        if (Float.valueOf(httpVersion) == Constants.HTTP_2_0) {
+            http2 = true;
+        }
+        connection = new DefaultHttp2Connection(false);
+        clientFrameListener = new ClientFrameListener();
+        Http2FrameListener frameListener = new DelegatingDecompressorFrameListener(connection, clientFrameListener);
+
+        Http2ConnectionHandlerBuilder connectionHandlerBuilder = new Http2ConnectionHandlerBuilder();
+        if (httpTraceLogEnabled) {
+            connectionHandlerBuilder.frameLogger(new FrameLogger(TRACE, Constants.TRACE_LOG_UPSTREAM));
+        }
+        http2ConnectionHandler = connectionHandlerBuilder.connection(connection).frameListener(frameListener).build();
+        http2TargetHandler = new Http2TargetHandler(connection, http2ConnectionHandler.encoder());
+        if (sslConfig != null) {
+            sslHandlerFactory = new SSLHandlerFactory(sslConfig);
+        }
+    }
+
+    public HttpClientChannelInitializer(SenderConfiguration senderConfiguration, HttpRoute httpRoute,
+        HttpClientConnectionManager connectionManager, ConnectionAvailabilityFuture connectionAvailabilityFuture) {
+        this.httpTraceLogEnabled = senderConfiguration.isHttpTraceLogEnabled();
+        this.keepAliveConfig = senderConfiguration.getKeepAliveConfig();
+        this.proxyServerConfiguration = senderConfiguration.getProxyServerConfiguration();
+//        this.http2ConnectionManager = connectionManager.getHttp2ConnectionManager();
         this.senderConfiguration = senderConfiguration;
         this.httpRoute = httpRoute;
         this.sslConfig = senderConfiguration.getClientSSLConfig();
