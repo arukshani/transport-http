@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import org.apache.commons.pool.PoolableObjectFactory;
+import org.apache.commons.pool.impl.GenericObjectPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.transport.http.netty.contract.config.SenderConfiguration;
@@ -89,7 +90,7 @@ public class PoolableTargetChannelFactory implements PoolableObjectFactory {
         httpClientChannelInitializer.setHttp2ClientChannel(targetChannel.getHttp2ClientChannel());
 
 //        LOG.debug("Created channel: {}", httpRoute);
-        LOG.warn("Actual connection creation");
+        LOG.warn("Create actual channel {}", targetChannel.getChannel().id());
 
         return targetChannel;
     }
@@ -97,13 +98,30 @@ public class PoolableTargetChannelFactory implements PoolableObjectFactory {
     @Override
     public void destroyObject(Object o) throws Exception {
         TargetChannel targetChannel = (TargetChannel) o;
-        if (LOG.isDebugEnabled()) {
+        LOG.warn("Destroy actual channel {}", targetChannel.getChannel().id());
+        /*if (LOG.isDebugEnabled()) {
             LOG.debug("Destroying channel: {}", targetChannel.getChannel().id());
         }
         if (targetChannel.getChannel().isOpen()) {
             targetChannel.getChannel().close();
             LOG.warn("destroy actual channel");
-        }
+        }*/
+
+       /* TargetChannel targetChannel = (TargetChannel) o;
+        GenericObjectPool genericObjectPool = connectionManager.getConnGlobalPool(targetChannel.getHttpRoute());
+        if (((TargetChannel) o).getChannel().isActive()) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Original Channel {} is returned to the pool. ", ((TargetChannel) o).getChannel().id());
+            }
+            genericObjectPool.returnObject(o);
+            LOG.warn("actual return channel");
+        } else {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Original Channel is destroyed. ");
+            }
+            genericObjectPool.invalidateObject(o);
+            LOG.warn("Source handler destroy channel");
+        }*/
     }
 
     @Override

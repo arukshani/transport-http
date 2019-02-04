@@ -176,7 +176,6 @@ public class DefaultHttpClientConnector implements HttpClientConnector {
                     return httpResponseFuture;
                 }
             }
-/*
             if (clientConnectionPool == null) {
                 clientConnectionPool = connectionManager.getClientConnectionPool(route, srcHandler, senderConfiguration,
                                                                                  bootstrapConfig, clientEventGroup);
@@ -184,12 +183,15 @@ public class DefaultHttpClientConnector implements HttpClientConnector {
 
             TargetChannel targetChannel = (TargetChannel) clientConnectionPool.borrowObject();
             targetChannel.setCorrelatedSource(srcHandler);
-            targetChannel.setConnectionManager(connectionManager);*/
+            targetChannel.setConnectionManager(connectionManager);
 
             // Look for the connection from http connection manager
-            TargetChannel targetChannel = connectionManager.borrowTargetChannel(route, srcHandler, senderConfiguration,
-                                                                                bootstrapConfig, clientEventGroup);
+//            TargetChannel targetChannel = connectionManager.borrowTargetChannel(route, srcHandler, senderConfiguration,
+//                                                                                bootstrapConfig, clientEventGroup);
 
+
+//            TargetChannel targetChannel = connectionManager.borrowObjectFromPoolablePool(route, srcHandler, senderConfiguration,
+//                                                                                bootstrapConfig, clientEventGroup);
 
             Http2ClientChannel freshHttp2ClientChannel = targetChannel.getHttp2ClientChannel();
             outboundMsgHolder.setHttp2ClientChannel(freshHttp2ClientChannel);
