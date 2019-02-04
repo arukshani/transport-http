@@ -59,15 +59,15 @@ public class ConnectionManager {
     }
 
     public void returnChannel(TargetChannel targetChannel) throws Exception {
-        releaseChannelToPool(targetChannel, this.connGlobalPool.get(targetChannel.getHttpRoute().toString()));
+//        releaseChannelToPool(targetChannel, this.connGlobalPool.get(targetChannel.getHttpRoute().toString()));
 
 
-       /* if (targetChannel.getCorrelatedSource() != null) {
+        if (targetChannel.getCorrelatedSource() != null) {
             Map<String, GenericObjectPool> objectPoolMap = targetChannel.getCorrelatedSource().getTargetChannelPool();
             releaseChannelToPool(targetChannel, objectPoolMap.get(targetChannel.getHttpRoute().toString()));
         } else {
             releaseChannelToPool(targetChannel, this.connGlobalPool.get(targetChannel.getHttpRoute().toString()));
-        }*/
+        }
 
 //        releaseChannelToPool(targetChannel, poolablePool.get(targetChannel.getHttpRoute().toString()));
     }
@@ -79,7 +79,7 @@ public class ConnectionManager {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Returning connection {} to the pool", channelID);
                 }
-                LOG.warn("Channel returned to pool {}", targetChannel.getChannel().id());
+                LOG.warn("Channel returned to pool {}");
                 pool.returnObject(targetChannel);
             } else {
                 LOG.debug("Channel {} is inactive hence not returning to connection pool", channelID);
@@ -90,10 +90,10 @@ public class ConnectionManager {
     }
 
     public void invalidateTargetChannel(TargetChannel targetChannel) throws Exception {
-        LOG.warn("Invalidate channel {}", targetChannel.getChannel().id());
-        this.connGlobalPool.get(targetChannel.getHttpRoute().toString()).invalidateObject(targetChannel);
+        LOG.warn("Invalidate channel {}");
+//        this.connGlobalPool.get(targetChannel.getHttpRoute().toString()).invalidateObject(targetChannel);
 
-        /*if (targetChannel.getCorrelatedSource() != null) {
+        if (targetChannel.getCorrelatedSource() != null) {
             Map<String, GenericObjectPool> objectPoolMap = targetChannel.getCorrelatedSource().getTargetChannelPool();
             try {
                 // Need a null check because SourceHandler side could timeout before TargetHandler side.
@@ -110,7 +110,7 @@ public class ConnectionManager {
             }
         } else {
             this.connGlobalPool.get(targetChannel.getHttpRoute().toString()).invalidateObject(targetChannel);
-        }*/
+        }
 
 //        poolablePool.get(targetChannel.getHttpRoute().toString()).invalidateObject(targetChannel);
 

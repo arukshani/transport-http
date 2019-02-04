@@ -19,7 +19,7 @@ public class PoolableTargetChannelFactoryPerSrcHndlr implements PoolableObjectFa
     public Object makeObject() throws Exception {
         TargetChannel targetChannel = (TargetChannel) this.genericObjectPool.borrowObject();
 //        LOG.debug("Created channel: {}", targetChannel);
-        LOG.warn("Source handler makeObject");
+        LOG.warn("Wrapper makeObject {}");
         return targetChannel;
     }
 
@@ -29,12 +29,13 @@ public class PoolableTargetChannelFactoryPerSrcHndlr implements PoolableObjectFa
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Original Channel {} is returned to the pool. ", ((TargetChannel) o).getChannel().id());
             }
+            LOG.warn("Wrapper destroy return channel {}");
             this.genericObjectPool.returnObject(o);
-            LOG.warn("Source handler return channel");
         } else {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Original Channel is destroyed. ");
             }
+            LOG.warn("Wrapper destroy destroy channel {}");
             this.genericObjectPool.invalidateObject(o);
             LOG.warn("Source handler destroy channel");
         }
@@ -44,6 +45,7 @@ public class PoolableTargetChannelFactoryPerSrcHndlr implements PoolableObjectFa
     public boolean validateObject(Object o) {
         if (((TargetChannel) o).getChannel() != null) {
             boolean answer = ((TargetChannel) o).getChannel().isActive();
+
             LOG.debug("Validating channel: {} -> {}", o, answer);
             return answer;
         }

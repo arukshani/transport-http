@@ -106,7 +106,7 @@ public class TargetHandler extends ChannelInboundHandlerAdapter {
         if (!idleTimeoutTriggered) {
             outboundRequestMsg.getMessageStateContext().getSenderState().handleAbruptChannelClosure(httpResponseFuture);
         }
-        LOG.warn("Target channel inactive {}", targetChannel.getChannel().id());
+        LOG.warn("Target channel inactive {}");
         connectionManager.invalidateTargetChannel(targetChannel);
 
         if (handlerExecutor != null) {

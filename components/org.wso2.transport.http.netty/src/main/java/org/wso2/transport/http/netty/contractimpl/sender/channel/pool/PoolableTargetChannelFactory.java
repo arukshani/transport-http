@@ -90,7 +90,7 @@ public class PoolableTargetChannelFactory implements PoolableObjectFactory {
         httpClientChannelInitializer.setHttp2ClientChannel(targetChannel.getHttp2ClientChannel());
 
 //        LOG.debug("Created channel: {}", httpRoute);
-        LOG.warn("Create actual channel {}", targetChannel.getChannel().id());
+        LOG.warn("Create actual channel {}", httpRoute);
 
         return targetChannel;
     }
@@ -98,14 +98,13 @@ public class PoolableTargetChannelFactory implements PoolableObjectFactory {
     @Override
     public void destroyObject(Object o) throws Exception {
         TargetChannel targetChannel = (TargetChannel) o;
-        LOG.warn("Destroy actual channel {}", targetChannel.getChannel().id());
-        /*if (LOG.isDebugEnabled()) {
+        LOG.warn("Destroy actual channel {}");
+        if (LOG.isDebugEnabled()) {
             LOG.debug("Destroying channel: {}", targetChannel.getChannel().id());
         }
         if (targetChannel.getChannel().isOpen()) {
             targetChannel.getChannel().close();
-            LOG.warn("destroy actual channel");
-        }*/
+        }
 
        /* TargetChannel targetChannel = (TargetChannel) o;
         GenericObjectPool genericObjectPool = connectionManager.getConnGlobalPool(targetChannel.getHttpRoute());
