@@ -41,11 +41,15 @@ public class ConnectionManager {
     private PoolConfiguration poolConfiguration;
     private final Map<String, GenericObjectPool> connGlobalPool;
     private Http2ConnectionManager http2ConnectionManager;
+    private PoolManagementPolicy poolManagementPolicy;
 
     public ConnectionManager(PoolConfiguration poolConfiguration) {
         this.poolConfiguration = poolConfiguration;
         connGlobalPool = new ConcurrentHashMap<>();
         this.http2ConnectionManager = new Http2ConnectionManager(poolConfiguration);
+        if (poolConfiguration.getNumberOfPools() == 1) {
+            this.poolManagementPolicy = PoolManagementPolicy.LOCK_DEFAULT_POOLING;
+        }
     }
 
     private GenericObjectPool createPoolForRoute(PoolableTargetChannelFactory poolableTargetChannelFactory) {
@@ -53,7 +57,13 @@ public class ConnectionManager {
     }
 
     public void returnChannel(TargetChannel targetChannel) throws Exception {
-        releaseChannelToPool(targetChannel, this.connGlobalPool.get(targetChannel.getHttpRoute().toString()));
+//        releaseChannelToPool(targetChannel, this.connGlobalPool.get(targetChannel.getHttpRoute().toString()));
+        if (targetChannel.getCorrelatedSource() != null) {
+            Map<String, GenericObjectPool> objectPoolMap = targetChannel.getCorrelatedSource().getTargetChannelPool();
+            releaseChannelToPool(targetChannel, objectPoolMap.get(targetChannel.getHttpRoute().toString()));
+        } else {
+            releaseChannelToPool(targetChannel, this.connGlobalPool.get(targetChannel.getHttpRoute().toString()));
+        }
     }
 
     private void releaseChannelToPool(TargetChannel targetChannel, GenericObjectPool pool) throws Exception {
@@ -73,7 +83,25 @@ public class ConnectionManager {
     }
 
     public void invalidateTargetChannel(TargetChannel targetChannel) throws Exception {
-        this.connGlobalPool.get(targetChannel.getHttpRoute().toString()).invalidateObject(targetChannel);
+//        this.connGlobalPool.get(targetChannel.getHttpRoute().toString()).invalidateObject(targetChannel);
+        if (targetChannel.getCorrelatedSource() != null) {
+            Map<String, GenericObjectPool> objectPoolMap = targetChannel.getCorrelatedSource().getTargetChannelPool();
+            try {
+                // Need a null check because SourceHandler side could timeout before TargetHandler side.
+                String httpRoute = targetChannel.getHttpRoute().toString();
+                if (objectPoolMap.get(httpRoute) != null) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Invalidating connection {} to the pool",
+                                  targetChannel.getChannel().id().asShortText());
+                    }
+                    objectPoolMap.get(httpRoute).invalidateObject(targetChannel);
+                }
+            } catch (Exception e) {
+                throw new Exception("Cannot invalidate channel from pool", e);
+            }
+        } else {
+            this.connGlobalPool.get(targetChannel.getHttpRoute().toString()).invalidateObject(targetChannel);
+        }
     }
 
     private GenericObjectPool.Config instantiateAndConfigureConfig() {
@@ -148,5 +176,85 @@ public class ConnectionManager {
             }
         }
         return clientPool;
+    }
+
+    private GenericObjectPool createPoolForRoutePerSrcHndlr(GenericObjectPool genericObjectPool) {
+        return new GenericObjectPool(new PoolableTargetChannelFactoryPerSrcHndlr(genericObjectPool),
+                                     instantiateAndConfigureConfig());
+    }
+
+    /**
+     * @param httpRoute BE address
+     * @param sourceHandler Incoming channel
+     * @param senderConfig The sender configuration instance
+     * @return the target channel which is requested for given parameters.
+     * @throws Exception to notify any errors occur during retrieving the target channel
+     */
+    public TargetChannel borrowTargetChannel(HttpRoute httpRoute, SourceHandler sourceHandler,
+                                             SenderConfiguration senderConfig, BootstrapConfiguration bootstrapConfig,
+                                             EventLoopGroup clientGroup) throws Exception {
+        GenericObjectPool trgHlrConnPool;
+
+        if (sourceHandler != null) {
+            EventLoopGroup group;
+            ChannelHandlerContext ctx = sourceHandler.getInboundChannelContext();
+            group = ctx.channel().eventLoop();
+            Class eventLoopClass = ctx.channel().getClass();
+
+            if (poolManagementPolicy == PoolManagementPolicy.LOCK_DEFAULT_POOLING) {
+                // This is faster than the above one (about 2k difference)
+                Map<String, GenericObjectPool> srcHlrConnPool = sourceHandler.getTargetChannelPool();
+                trgHlrConnPool = srcHlrConnPool.get(httpRoute.toString());
+                if (trgHlrConnPool == null) {
+                    PoolableTargetChannelFactory poolableTargetChannelFactory =
+                        new PoolableTargetChannelFactory(group, eventLoopClass, httpRoute, senderConfig,
+                                                         bootstrapConfig, this);
+                    trgHlrConnPool = createPoolForRoute(poolableTargetChannelFactory);
+                    srcHlrConnPool.put(httpRoute.toString(), trgHlrConnPool);
+                }
+            } else {
+                Map<String, GenericObjectPool> srcHlrConnPool = sourceHandler.getTargetChannelPool();
+                trgHlrConnPool = srcHlrConnPool.get(httpRoute.toString());
+                if (trgHlrConnPool == null) {
+                    synchronized (this) {
+                        if (!this.connGlobalPool.containsKey(httpRoute.toString())) {
+                            PoolableTargetChannelFactory poolableTargetChannelFactory =
+                                new PoolableTargetChannelFactory(group,
+                                                                 eventLoopClass, httpRoute, senderConfig, bootstrapConfig, this);
+                            trgHlrConnPool = createPoolForRoute(poolableTargetChannelFactory);
+                            this.connGlobalPool.put(httpRoute.toString(), trgHlrConnPool);
+                        }
+                        trgHlrConnPool = this.connGlobalPool.get(httpRoute.toString());
+                        trgHlrConnPool = createPoolForRoutePerSrcHndlr(trgHlrConnPool);
+                    }
+                    srcHlrConnPool.put(httpRoute.toString(), trgHlrConnPool);
+                }
+            }
+        } else {
+            Class cl = NioSocketChannel.class;
+            EventLoopGroup group = clientGroup;
+            synchronized (this) {
+                if (!this.connGlobalPool.containsKey(httpRoute.toString())) {
+                    PoolableTargetChannelFactory poolableTargetChannelFactory =
+                        new PoolableTargetChannelFactory(group, cl,
+                                                         httpRoute, senderConfig, bootstrapConfig, this);
+                    trgHlrConnPool = createPoolForRoute(poolableTargetChannelFactory);
+                    this.connGlobalPool.put(httpRoute.toString(), trgHlrConnPool);
+                }
+                trgHlrConnPool = this.connGlobalPool.get(httpRoute.toString());
+            }
+        }
+
+        TargetChannel targetChannel = (TargetChannel) trgHlrConnPool.borrowObject();
+        targetChannel.setCorrelatedSource(sourceHandler);
+        targetChannel.setConnectionManager(this);
+        return targetChannel;
+    }
+
+    /**
+     * Connection pool management policies for  target channels.
+     */
+    public enum PoolManagementPolicy {
+        LOCK_DEFAULT_POOLING,
     }
 }
