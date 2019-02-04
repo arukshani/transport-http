@@ -59,16 +59,16 @@ public class ConnectionManager {
     }
 
     public void returnChannel(TargetChannel targetChannel) throws Exception {
-//        releaseChannelToPool(targetChannel, this.connGlobalPool.get(targetChannel.getHttpRoute().toString()));
+        releaseChannelToPool(targetChannel, this.connGlobalPool.get(targetChannel.getHttpRoute().toString()));
 
 
-        if (targetChannel.getCorrelatedSource() != null) {
+      /*  if (targetChannel.getCorrelatedSource() != null) {
             Map<String, GenericObjectPool> objectPoolMap = targetChannel.getCorrelatedSource().getTargetChannelPool();
             releaseChannelToPool(targetChannel, objectPoolMap.get(targetChannel.getHttpRoute().toString()));
         } else {
             releaseChannelToPool(targetChannel, this.connGlobalPool.get(targetChannel.getHttpRoute().toString()));
         }
-
+*/
 //        releaseChannelToPool(targetChannel, poolablePool.get(targetChannel.getHttpRoute().toString()));
     }
 
@@ -91,9 +91,9 @@ public class ConnectionManager {
 
     public void invalidateTargetChannel(TargetChannel targetChannel) throws Exception {
         LOG.warn("Invalidate channel {}");
-//        this.connGlobalPool.get(targetChannel.getHttpRoute().toString()).invalidateObject(targetChannel);
+        this.connGlobalPool.get(targetChannel.getHttpRoute().toString()).invalidateObject(targetChannel);
 
-        if (targetChannel.getCorrelatedSource() != null) {
+       /* if (targetChannel.getCorrelatedSource() != null) {
             Map<String, GenericObjectPool> objectPoolMap = targetChannel.getCorrelatedSource().getTargetChannelPool();
             try {
                 // Need a null check because SourceHandler side could timeout before TargetHandler side.
@@ -111,7 +111,7 @@ public class ConnectionManager {
         } else {
             this.connGlobalPool.get(targetChannel.getHttpRoute().toString()).invalidateObject(targetChannel);
         }
-
+*/
 //        poolablePool.get(targetChannel.getHttpRoute().toString()).invalidateObject(targetChannel);
 
     }
@@ -119,7 +119,8 @@ public class ConnectionManager {
     private GenericObjectPool.Config instantiateAndConfigureConfig() {
         GenericObjectPool.Config config = new GenericObjectPool.Config();
         config.maxActive = poolConfiguration.getMaxActivePerPool();
-        config.maxIdle = poolConfiguration.getMaxIdlePerPool();
+//        config.maxIdle = poolConfiguration.getMaxIdlePerPool();
+        config.maxIdle = 1000;
         config.minIdle = poolConfiguration.getMinIdlePerPool();
         config.testOnBorrow = poolConfiguration.isTestOnBorrow();
         config.testWhileIdle = poolConfiguration.isTestWhileIdle();
