@@ -20,6 +20,7 @@
 package org.wso2.transport.http.netty.contractimpl;
 
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -50,6 +51,7 @@ import javax.net.ssl.SSLException;
 
 import static org.wso2.transport.http.netty.contract.Constants.PIPELINING_THREAD_COUNT;
 import static org.wso2.transport.http.netty.contract.Constants.PIPELINING_THREAD_POOL_NAME;
+import static org.wso2.transport.http.netty.contract.Constants.USE_EPOLL;
 
 /**
  * Implementation of HttpWsConnectorFactory interface.
@@ -64,15 +66,27 @@ public class DefaultHttpWsConnectorFactory implements HttpWsConnectorFactory {
     private final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     public DefaultHttpWsConnectorFactory() {
-        bossGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors());
-        workerGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors() * 2);
-        clientGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors() * 2);
+        if (USE_EPOLL) {
+            bossGroup = new EpollEventLoopGroup(Runtime.getRuntime().availableProcessors());
+            workerGroup = new EpollEventLoopGroup(Runtime.getRuntime().availableProcessors() * 2);
+            clientGroup = new EpollEventLoopGroup(Runtime.getRuntime().availableProcessors() * 2);
+        } else {
+            bossGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors());
+            workerGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors() * 2);
+            clientGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors() * 2);
+        }
     }
 
     public DefaultHttpWsConnectorFactory(int serverSocketThreads, int childSocketThreads, int clientThreads) {
-        bossGroup = new NioEventLoopGroup(serverSocketThreads);
-        workerGroup = new NioEventLoopGroup(childSocketThreads);
-        clientGroup = new NioEventLoopGroup(clientThreads);
+        if (USE_EPOLL) {
+            bossGroup = new EpollEventLoopGroup(serverSocketThreads);
+            workerGroup = new EpollEventLoopGroup(childSocketThreads);
+            clientGroup = new EpollEventLoopGroup(clientThreads);
+        } else {
+            bossGroup = new NioEventLoopGroup(serverSocketThreads);
+            workerGroup = new NioEventLoopGroup(childSocketThreads);
+            clientGroup = new NioEventLoopGroup(clientThreads);
+        }
     }
 
     @Override

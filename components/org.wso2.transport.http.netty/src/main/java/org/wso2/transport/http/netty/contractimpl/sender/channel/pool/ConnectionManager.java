@@ -18,6 +18,7 @@ package org.wso2.transport.http.netty.contractimpl.sender.channel.pool;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.commons.pool.impl.GenericObjectPool;
 import org.slf4j.Logger;
@@ -33,6 +34,8 @@ import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2ConnectionMa
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static org.wso2.transport.http.netty.contract.Constants.USE_EPOLL;
 
 /**
  * A class which handles connection pool management.
@@ -100,7 +103,7 @@ public class ConnectionManager {
                                                           BootstrapConfiguration bootstrapConfig,
                                                           EventLoopGroup clientEventGroup) {
         GenericObjectPool trgHlrConnPool;
-        Class eventLoopClass = NioSocketChannel.class;
+        Class eventLoopClass = USE_EPOLL ? EpollSocketChannel.class :NioSocketChannel.class;
         synchronized (this) {
             if (!globalConnPool.containsKey(httpRoute.toString())) {
                 createTrgHlrPoolInGlobalPool(httpRoute, senderConfig, bootstrapConfig, clientEventGroup,

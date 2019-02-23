@@ -22,6 +22,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
@@ -44,6 +45,8 @@ import org.wso2.transport.http.netty.internal.HttpTransportContextHolder;
 
 import java.net.InetSocketAddress;
 import javax.net.ssl.SSLContext;
+
+import static org.wso2.transport.http.netty.contract.Constants.USE_EPOLL;
 
 /**
  * {@code ServerConnectorBootstrap} is the heart of the HTTP Server Connector.
@@ -113,7 +116,11 @@ public class ServerConnectorBootstrap {
     }
 
     public void addThreadPools(EventLoopGroup bossGroup, EventLoopGroup workerGroup) {
-        serverBootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class);
+        if (USE_EPOLL) {
+            serverBootstrap.group(bossGroup, workerGroup).channel(EpollServerSocketChannel.class);
+        } else {
+            serverBootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class);
+        }
     }
 
     public void addHttpTraceLogHandler(Boolean isHttpTraceLogEnabled) {

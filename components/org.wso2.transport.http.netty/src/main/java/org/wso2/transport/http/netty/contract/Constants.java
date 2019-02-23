@@ -395,6 +395,7 @@ public final class Constants {
 
     public static final int HTTP_CARBON_MESSAGE_PROPERTIES_MAP_DEFAULT_SIZE = 64;
 
+    public static final boolean USE_EPOLL = true;
 
     private Constants() {
     }

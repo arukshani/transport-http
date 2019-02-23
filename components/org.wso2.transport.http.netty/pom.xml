@@ -81,6 +81,10 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-resolver</artifactId>
         </dependency>
+       <!-- <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-epoll</artifactId>
+        </dependency>-->
 
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -137,6 +141,11 @@
             <groupId>com.mashape.unirest</groupId>
             <artifactId>unirest-java</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.33.Final</version>
         </dependency>
     </dependencies>
 
@@ -210,6 +219,7 @@
             io.netty.handler.*;version="${netty.package.import.version.range}",
             io.netty.bootstrap.*;version="${netty.package.import.version.range}",
             io.netty.channel.*;version="${netty.package.import.version.range}",
+            io.netty.transport.native.*;version="${netty.package.import.version.range}",
             org.wso2.carbon.kernel.startupresolver.*;version="${carbon.kernel.package.import.version.range}",
             org.slf4j.*;version="${slf4j.logging.package.import.version.range}",
             javax.xml.bind.*;version="${javax.xml.bind.import.version.range}",

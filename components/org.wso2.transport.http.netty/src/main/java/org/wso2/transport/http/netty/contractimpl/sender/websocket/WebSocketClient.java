@@ -25,6 +25,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -57,6 +58,8 @@ import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLPeerUnverifiedException;
+
+import static org.wso2.transport.http.netty.contract.Constants.USE_EPOLL;
 
 /**
  * WebSocket client for sending and receiving messages in WebSocket as a client.
@@ -135,7 +138,7 @@ public class WebSocketClient {
     private Bootstrap initClientBootstrap(String host, int port, DefaultClientHandshakeFuture handshakeFuture) {
         Bootstrap clientBootstrap = new Bootstrap();
         SSLConfig sslConfig = connectorConfig.getClientSSLConfig();
-        clientBootstrap.group(wsClientEventLoopGroup).channel(NioSocketChannel.class).handler(
+        clientBootstrap.group(wsClientEventLoopGroup).channel(USE_EPOLL ? EpollSocketChannel.class: NioSocketChannel.class).handler(
                 new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) throws SSLException {
