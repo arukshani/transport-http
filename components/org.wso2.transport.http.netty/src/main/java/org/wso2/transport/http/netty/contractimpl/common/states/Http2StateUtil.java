@@ -313,7 +313,7 @@ public class Http2StateUtil {
      * @param conn the HTTP2 connection
      * @return the next stream id
      */
-    private static synchronized int getNextStreamId(Http2Connection conn) {
+    private static int getNextStreamId(Http2Connection conn) {
         return conn.local().incrementAndGetNextStreamId();
     }
 
@@ -324,7 +324,7 @@ public class Http2StateUtil {
      * @param streamId the id of the stream
      * @throws Http2Exception if a protocol-related error occurred
      */
-    private static synchronized void createStream(Http2Connection conn, int streamId) throws Http2Exception {
+    private static void createStream(Http2Connection conn, int streamId) throws Http2Exception {
         conn.local().createStream(streamId, false);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Stream created streamId: {}", streamId);
