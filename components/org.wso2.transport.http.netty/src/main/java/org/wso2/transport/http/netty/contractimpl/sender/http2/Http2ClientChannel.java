@@ -21,6 +21,7 @@ package org.wso2.transport.http.netty.contractimpl.sender.http2;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2EventAdapter;
 import io.netty.handler.codec.http2.Http2Stream;
 import org.slf4j.Logger;
@@ -49,6 +50,7 @@ public class Http2ClientChannel {
     private ConcurrentHashMap<Integer, OutboundMsgHolder> promisedMessages;
     private Channel channel;
     private Http2Connection connection;
+    private Http2ConnectionEncoder encoder;
     private ChannelFuture channelFuture;
     private HttpRoute httpRoute;
     private Http2ConnectionManager http2ConnectionManager;
@@ -61,10 +63,11 @@ public class Http2ClientChannel {
     private StreamCloseListener streamCloseListener;
 
     public Http2ClientChannel(Http2ConnectionManager http2ConnectionManager, Http2Connection connection,
-                              HttpRoute httpRoute, Channel channel) {
+                              HttpRoute httpRoute, Channel channel, Http2ConnectionEncoder encoder) {
         this.http2ConnectionManager = http2ConnectionManager;
         this.channel = channel;
         this.connection = connection;
+        this.encoder = encoder;
         this.httpRoute = httpRoute;
         streamCloseListener = new StreamCloseListener(this);
         this.connection.addListener(streamCloseListener);
@@ -116,6 +119,10 @@ public class Http2ClientChannel {
      */
     public void setChannelFuture(ChannelFuture channelFuture) {
         this.channelFuture = channelFuture;
+    }
+
+    public Http2ConnectionEncoder getEncoder() {
+        return encoder;
     }
 
     /**

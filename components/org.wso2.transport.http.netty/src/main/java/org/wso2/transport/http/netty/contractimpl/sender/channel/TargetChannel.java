@@ -83,7 +83,7 @@ public class TargetChannel {
             http2ClientChannel =
                     new Http2ClientChannel(httpClientChannelInitializer.getHttp2ConnectionManager(),
                                            httpClientChannelInitializer.getConnection(),
-                                           httpRoute, channelFuture.channel());
+                                           httpRoute, channelFuture.channel(), httpClientChannelInitializer.getEncoder());
         }
         this.connectionAvailabilityFuture = connectionAvailabilityFuture;
     }

@@ -35,8 +35,7 @@ import org.slf4j.LoggerFactory;
 import org.wso2.transport.http.netty.contractimpl.common.states.Http2MessageStateContext;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2ClientChannel;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2DataEventListener;
-import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2TargetHandler;
-import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2TargetHandler.Http2RequestWriter;
+import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2RequestWriter;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.OutboundMsgHolder;
 import org.wso2.transport.http.netty.message.Http2DataFrame;
 import org.wso2.transport.http.netty.message.Http2HeadersFrame;
@@ -54,7 +53,6 @@ public class SendingEntityBody implements SenderState {
 
     private static final Logger LOG = LoggerFactory.getLogger(SendingEntityBody.class);
 
-    private final Http2TargetHandler http2TargetHandler;
     private final Http2MessageStateContext http2MessageStateContext;
     private final OutboundMsgHolder outboundMsgHolder;
     private final Http2ConnectionEncoder encoder;
@@ -62,12 +60,11 @@ public class SendingEntityBody implements SenderState {
     private final int streamId;
     private final Http2RequestWriter http2RequestWriter;
 
-    public SendingEntityBody(Http2TargetHandler http2TargetHandler, Http2RequestWriter http2RequestWriter) {
-        this.http2TargetHandler = http2TargetHandler;
+    public SendingEntityBody(Http2RequestWriter http2RequestWriter) {
         this.http2MessageStateContext = http2RequestWriter.getHttp2MessageStateContext();
         this.outboundMsgHolder = http2RequestWriter.getOutboundMsgHolder();
-        this.encoder = http2TargetHandler.getEncoder();
-        this.http2ClientChannel = http2TargetHandler.getHttp2ClientChannel();
+        this.http2ClientChannel = http2RequestWriter.getHttp2ClientChannel();
+        this.encoder = http2ClientChannel.getEncoder();
         this.streamId = http2RequestWriter.getStreamId();
         this.http2RequestWriter = http2RequestWriter;
     }
@@ -89,7 +86,7 @@ public class SendingEntityBody implements SenderState {
                                            Http2MessageStateContext http2MessageStateContext) {
         // In bidirectional streaming case, while sending the request data frames, server response data frames can
         // receive. In order to handle it. we need to change the states depending on the action.
-        http2MessageStateContext.setSenderState(new ReceivingHeaders(http2TargetHandler, http2RequestWriter));
+        http2MessageStateContext.setSenderState(new ReceivingHeaders(http2RequestWriter));
         http2MessageStateContext.getSenderState().readInboundResponseHeaders(ctx, http2HeadersFrame, outboundMsgHolder,
                 serverPush, http2MessageStateContext);
     }
@@ -100,7 +97,7 @@ public class SendingEntityBody implements SenderState {
                                         Http2MessageStateContext http2MessageStateContext) {
         // In bidirectional streaming case, while sending the request data frames, server response data frames can
         // receive. In order to handle it. we need to change the states depending on the action.
-        http2MessageStateContext.setSenderState(new ReceivingEntityBody(http2TargetHandler, http2RequestWriter));
+        http2MessageStateContext.setSenderState(new ReceivingEntityBody(http2RequestWriter));
         http2MessageStateContext.getSenderState().readInboundResponseBody(ctx, http2DataFrame, outboundMsgHolder,
                 serverPush, http2MessageStateContext);
     }
@@ -144,7 +141,7 @@ public class SendingEntityBody implements SenderState {
             }
             if (endStream) {
                 outboundMsgHolder.setRequestWritten(true);
-                http2MessageStateContext.setSenderState(new RequestCompleted(http2TargetHandler, http2RequestWriter));
+                http2MessageStateContext.setSenderState(new RequestCompleted(http2RequestWriter));
             }
         } finally {
             if (release) {

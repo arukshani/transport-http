@@ -33,8 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.wso2.transport.http.netty.contractimpl.common.Util;
 import org.wso2.transport.http.netty.contractimpl.common.states.Http2MessageStateContext;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2ClientChannel;
-import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2TargetHandler;
-import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2TargetHandler.Http2RequestWriter;
+import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2RequestWriter;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.OutboundMsgHolder;
 import org.wso2.transport.http.netty.message.Http2DataFrame;
 import org.wso2.transport.http.netty.message.Http2HeadersFrame;
@@ -57,7 +56,6 @@ public class SendingHeaders implements SenderState {
 
     private static final Logger LOG = LoggerFactory.getLogger(SendingHeaders.class);
 
-    private final Http2TargetHandler http2TargetHandler;
     private final Http2RequestWriter http2RequestWriter;
     private final Http2MessageStateContext http2MessageStateContext;
     private final HttpCarbonMessage httpOutboundRequest;
@@ -67,15 +65,14 @@ public class SendingHeaders implements SenderState {
     private final Http2ClientChannel http2ClientChannel;
     private int streamId;
 
-    public SendingHeaders(Http2TargetHandler http2TargetHandler, Http2RequestWriter http2RequestWriter) {
-        this.http2TargetHandler = http2TargetHandler;
+    public SendingHeaders(Http2RequestWriter http2RequestWriter) {
         this.http2RequestWriter = http2RequestWriter;
         this.http2MessageStateContext = http2RequestWriter.getHttp2MessageStateContext();
         this.httpOutboundRequest = http2RequestWriter.getHttpOutboundRequest();
         this.outboundMsgHolder = http2RequestWriter.getOutboundMsgHolder();
-        this.connection = http2TargetHandler.getConnection();
-        this.encoder = http2TargetHandler.getEncoder();
-        this.http2ClientChannel = http2TargetHandler.getHttp2ClientChannel();
+        this.http2ClientChannel = http2RequestWriter.getHttp2ClientChannel();
+        this.connection = http2ClientChannel.getConnection();
+        this.encoder = http2ClientChannel.getEncoder();
     }
 
     @Override
@@ -96,7 +93,7 @@ public class SendingHeaders implements SenderState {
         // This is an action due to an application error. When the initial frames of the response is being received
         // before sending the complete request.
         outboundMsgHolder.getRequest().setIoException(new IOException(INBOUND_RESPONSE_ALREADY_RECEIVED));
-        http2MessageStateContext.setSenderState(new ReceivingHeaders(http2TargetHandler, http2RequestWriter));
+        http2MessageStateContext.setSenderState(new ReceivingHeaders(http2RequestWriter));
         http2MessageStateContext.getSenderState().readInboundResponseHeaders(ctx, http2HeadersFrame, outboundMsgHolder,
                 serverPush, http2MessageStateContext);
     }
@@ -126,9 +123,9 @@ public class SendingHeaders implements SenderState {
         // Write Headers
         writeOutboundRequestHeaders(ctx, httpRequest, endStream);
         if (endStream) {
-            http2MessageStateContext.setSenderState(new RequestCompleted(http2TargetHandler, http2RequestWriter));
+            http2MessageStateContext.setSenderState(new RequestCompleted(http2RequestWriter));
         } else {
-            http2MessageStateContext.setSenderState(new SendingEntityBody(http2TargetHandler, http2RequestWriter));
+            http2MessageStateContext.setSenderState(new SendingEntityBody(http2RequestWriter));
             http2MessageStateContext.getSenderState().writeOutboundRequestBody(ctx, msg, http2MessageStateContext);
         }
     }

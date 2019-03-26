@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.transport.http.netty.contractimpl.common.states.Http2MessageStateContext;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2ClientChannel;
+import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2RequestWriter;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2TargetHandler;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.OutboundMsgHolder;
 import org.wso2.transport.http.netty.message.Http2DataFrame;
@@ -46,15 +47,12 @@ public class ReceivingEntityBody implements SenderState {
 
     private static final Logger LOG = LoggerFactory.getLogger(ReceivingEntityBody.class);
 
-    private final Http2TargetHandler http2TargetHandler;
     private final Http2ClientChannel http2ClientChannel;
-    private final Http2TargetHandler.Http2RequestWriter http2RequestWriter;
+    private final Http2RequestWriter http2RequestWriter;
 
-    ReceivingEntityBody(Http2TargetHandler http2TargetHandler,
-                        Http2TargetHandler.Http2RequestWriter http2RequestWriter) {
-        this.http2TargetHandler = http2TargetHandler;
+    ReceivingEntityBody(Http2RequestWriter http2RequestWriter) {
         this.http2RequestWriter = http2RequestWriter;
-        this.http2ClientChannel = http2TargetHandler.getHttp2ClientChannel();
+        this.http2ClientChannel = http2RequestWriter.getHttp2ClientChannel();
     }
 
     @Override
@@ -69,7 +67,7 @@ public class ReceivingEntityBody implements SenderState {
         // receive. In order to handle it. we need to change the states depending on the action.
         // This is temporary check. Remove the conditional check after reviewing message flow.
         if (http2RequestWriter != null) {
-            http2MessageStateContext.setSenderState(new SendingEntityBody(http2TargetHandler, http2RequestWriter));
+            http2MessageStateContext.setSenderState(new SendingEntityBody(http2RequestWriter));
             http2MessageStateContext.getSenderState().writeOutboundRequestBody(ctx, httpContent,
                     http2MessageStateContext);
         } else {
@@ -84,7 +82,7 @@ public class ReceivingEntityBody implements SenderState {
                                            OutboundMsgHolder outboundMsgHolder, boolean serverPush,
                                            Http2MessageStateContext http2MessageStateContext) {
         // When trailer headers are going to be received after receiving entity body of the response.
-        http2MessageStateContext.setSenderState(new ReceivingHeaders(http2TargetHandler, http2RequestWriter));
+        http2MessageStateContext.setSenderState(new ReceivingHeaders(http2RequestWriter));
         http2MessageStateContext.getSenderState().readInboundResponseHeaders(ctx, http2HeadersFrame, outboundMsgHolder,
                 serverPush, http2MessageStateContext);
     }
@@ -113,7 +111,7 @@ public class ReceivingEntityBody implements SenderState {
             onResponseDataRead(outboundMsgHolder, streamId, endOfStream, data);
         }
         if (endOfStream) {
-            http2MessageStateContext.setSenderState(new EntityBodyReceived(http2TargetHandler, http2RequestWriter));
+            http2MessageStateContext.setSenderState(new EntityBodyReceived(http2RequestWriter));
         }
     }
 

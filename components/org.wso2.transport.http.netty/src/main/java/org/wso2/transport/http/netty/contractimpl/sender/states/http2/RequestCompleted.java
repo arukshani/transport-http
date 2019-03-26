@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.transport.http.netty.contractimpl.common.states.Http2MessageStateContext;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2ClientChannel;
-import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2TargetHandler;
+import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2RequestWriter;
 import org.wso2.transport.http.netty.contractimpl.sender.http2.OutboundMsgHolder;
 import org.wso2.transport.http.netty.message.Http2DataFrame;
 import org.wso2.transport.http.netty.message.Http2HeadersFrame;
@@ -41,15 +41,16 @@ public class RequestCompleted implements SenderState {
 
     private static final Logger LOG = LoggerFactory.getLogger(RequestCompleted.class);
 
-    private final Http2TargetHandler http2TargetHandler;
     private final Http2ClientChannel http2ClientChannel;
-    private final Http2TargetHandler.Http2RequestWriter http2RequestWriter;
+    private Http2RequestWriter http2RequestWriter;
 
-    public RequestCompleted(Http2TargetHandler http2TargetHandler,
-                            Http2TargetHandler.Http2RequestWriter http2RequestWriter) {
+    public RequestCompleted(Http2RequestWriter http2RequestWriter) {
         this.http2RequestWriter = http2RequestWriter;
-        this.http2TargetHandler = http2TargetHandler;
-        this.http2ClientChannel = http2TargetHandler.getHttp2ClientChannel();
+        this.http2ClientChannel = http2RequestWriter.getHttp2ClientChannel();
+    }
+
+    public RequestCompleted(Http2ClientChannel http2ClientChannel) {
+        this.http2ClientChannel = http2ClientChannel;
     }
 
     @Override
@@ -68,9 +69,10 @@ public class RequestCompleted implements SenderState {
                                            OutboundMsgHolder outboundMsgHolder, boolean serverPush,
                                            Http2MessageStateContext http2MessageStateContext) {
         // When the initial frames of the response is to be received after sending the complete request.
-        http2MessageStateContext.setSenderState(new ReceivingHeaders(http2TargetHandler, http2RequestWriter));
+        http2MessageStateContext.setSenderState(http2RequestWriter != null ? new ReceivingHeaders(http2RequestWriter) :
+                                                    new ReceivingHeaders(http2ClientChannel));
         http2MessageStateContext.getSenderState().readInboundResponseHeaders(ctx, http2HeadersFrame, outboundMsgHolder,
-                serverPush, http2MessageStateContext);
+                                                                             serverPush, http2MessageStateContext);
     }
 
     @Override

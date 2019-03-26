@@ -30,15 +30,14 @@ import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2NoMoreStreamIdsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.wso2.transport.http.netty.contract.HttpResponseFuture;
 import org.wso2.transport.http.netty.contractimpl.common.states.Http2MessageStateContext;
 import org.wso2.transport.http.netty.contractimpl.sender.states.http2.RequestCompleted;
 import org.wso2.transport.http.netty.contractimpl.sender.states.http2.SendingEntityBody;
-import org.wso2.transport.http.netty.contractimpl.sender.states.http2.SendingHeaders;
 import org.wso2.transport.http.netty.message.Http2DataFrame;
 import org.wso2.transport.http.netty.message.Http2HeadersFrame;
 import org.wso2.transport.http.netty.message.Http2PushPromise;
 import org.wso2.transport.http.netty.message.Http2Reset;
-import org.wso2.transport.http.netty.message.HttpCarbonMessage;
 
 /**
  * {@code Http2TargetHandler} is responsible for sending and receiving HTTP/2 frames over an outbound connection.
@@ -59,9 +58,18 @@ public class Http2TargetHandler extends ChannelDuplexHandler {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-        if (msg instanceof OutboundMsgHolder) {
+       /* if (msg instanceof OutboundMsgHolder) {
             OutboundMsgHolder outboundMsgHolder = (OutboundMsgHolder) msg;
-            new Http2TargetHandler.Http2RequestWriter(outboundMsgHolder).writeContent(ctx);
+            new Http2TargetHandler.Http2RequestWriter(outboundMsgHolder).startWritingContent(ctx);
+        } else*/
+
+
+
+        if (msg instanceof Http2Content) {
+            Http2Content http2Content = (Http2Content) msg;
+//            new Http2TargetHandler.Http2RequestWriter(outboundMsgHolder).startWritingContent(ctx);
+            writeOutboundRequest(ctx, http2Content.getHttpContent(), http2Content.getHttp2MessageStateContext(),
+                                 http2Content.getHttpResponseFuture());
         } else if (msg instanceof Http2Reset) {
             Http2Reset resetMsg = (Http2Reset) msg;
             resetStream(ctx, resetMsg.getStreamId(), resetMsg.getError());
@@ -119,10 +127,32 @@ public class Http2TargetHandler extends ChannelDuplexHandler {
         return encoder;
     }
 
+    private void writeOutboundRequest(ChannelHandlerContext ctx, HttpContent msg,
+                                      Http2MessageStateContext http2MessageStateContext,
+                                      HttpResponseFuture httpResponseFuture) throws Http2Exception {
+        try {
+            http2MessageStateContext.getSenderState().writeOutboundRequestBody(ctx, msg, http2MessageStateContext);
+        } catch (Http2NoMoreStreamIdsException ex) {
+            //Remove connection from the pool
+            http2ClientChannel.removeFromConnectionPool();
+            LOG.warn("Channel is removed from the connection pool : {}", ex.getMessage(), ex);
+            httpResponseFuture.notifyHttpListener(ex);
+        } catch (Http2Exception ex) {
+            LOG.error("Failed to send the request : " + ex.getMessage(), ex);
+            httpResponseFuture.notifyHttpListener(ex);
+        } catch (RuntimeException ex) {
+            http2MessageStateContext
+                .setSenderState(new SendingEntityBody(this));
+            http2MessageStateContext
+                .getSenderState().writeOutboundRequestBody(ctx, new DefaultLastHttpContent(),
+                                                           http2MessageStateContext);
+        }
+    }
+
     /**
      * {@code Http2RequestWriter} is used to write Http2 content to the connection.
      */
-    public class Http2RequestWriter {
+    /*public class Http2RequestWriter {
 
         HttpCarbonMessage httpOutboundRequest;
         OutboundMsgHolder outboundMsgHolder;
@@ -139,24 +169,26 @@ public class Http2TargetHandler extends ChannelDuplexHandler {
             }
         }
 
-        void writeContent(ChannelHandlerContext ctx) {
+        void startWritingContent(ChannelHandlerContext ctx) {
             httpOutboundRequest.getHttp2MessageStateContext()
-                    .setSenderState(new SendingHeaders(Http2TargetHandler.this, this));
+                .setSenderState(new SendingHeaders(Http2TargetHandler.this, this));
             // Write Content
-            httpOutboundRequest.getHttpContentAsync().setMessageListener(httpContent ->
-                    http2ClientChannel.getChannel().eventLoop().execute(() -> {
-                        try {
-                            writeOutboundRequest(ctx, httpContent);
-                        } catch (Http2NoMoreStreamIdsException ex) {
-                            //Remove connection from the pool
-                            http2ClientChannel.removeFromConnectionPool();
-                            LOG.warn("Channel is removed from the connection pool : {}", ex.getMessage(), ex);
-                            outboundMsgHolder.getResponseFuture().notifyHttpListener(ex);
-                        } catch (Http2Exception ex) {
-                            LOG.error("Failed to send the request : " + ex.getMessage(), ex);
-                            outboundMsgHolder.getResponseFuture().notifyHttpListener(ex);
-                        }
-                    }));
+            httpOutboundRequest.getHttpContentAsync().setMessageListener((httpContent -> {
+                LOG.warn("Thread: {}", Thread.currentThread());
+                http2ClientChannel.getChannel().eventLoop().execute(() -> {
+                    try {
+                        writeOutboundRequest(ctx, httpContent);
+                    } catch (Http2NoMoreStreamIdsException ex) {
+                        //Remove connection from the pool
+                        http2ClientChannel.removeFromConnectionPool();
+                        LOG.warn("Channel is removed from the connection pool : {}", ex.getMessage(), ex);
+                        outboundMsgHolder.getResponseFuture().notifyHttpListener(ex);
+                    } catch (Http2Exception ex) {
+                        LOG.error("Failed to send the request : " + ex.getMessage(), ex);
+                        outboundMsgHolder.getResponseFuture().notifyHttpListener(ex);
+                    }
+                });
+            }));
         }
 
         private void writeOutboundRequest(ChannelHandlerContext ctx, HttpContent msg) throws Http2Exception {
@@ -190,7 +222,7 @@ public class Http2TargetHandler extends ChannelDuplexHandler {
         public void setStreamId(int streamId) {
             this.streamId = streamId;
         }
-    }
+    }*/
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -263,7 +295,7 @@ public class Http2TargetHandler extends ChannelDuplexHandler {
         Http2MessageStateContext http2MessageStateContext = getHttp2MessageContext(outboundMsgHolder);
         if (http2MessageStateContext == null) {
             http2MessageStateContext = new Http2MessageStateContext();
-            http2MessageStateContext.setSenderState(new RequestCompleted(this, null));
+            http2MessageStateContext.setSenderState(new RequestCompleted(http2ClientChannel));
             outboundMsgHolder.getRequest().setHttp2MessageStateContext(http2MessageStateContext);
         }
         return http2MessageStateContext;

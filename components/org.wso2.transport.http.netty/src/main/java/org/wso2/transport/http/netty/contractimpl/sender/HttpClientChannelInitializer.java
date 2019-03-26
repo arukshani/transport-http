@@ -28,6 +28,7 @@ import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.DelegatingDecompressorFrameListener;
 import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder;
 import io.netty.handler.codec.http2.Http2FrameListener;
@@ -77,6 +78,7 @@ public class HttpClientChannelInitializer extends ChannelInitializer<SocketChann
     private ClientFrameListener clientFrameListener;
     private Http2TargetHandler http2TargetHandler;
     private Http2Connection connection;
+    private Http2ConnectionEncoder encoder;
     private SSLConfig sslConfig;
     private HttpRoute httpRoute;
     private SenderConfiguration senderConfiguration;
@@ -108,6 +110,7 @@ public class HttpClientChannelInitializer extends ChannelInitializer<SocketChann
         }
         http2ConnectionHandler = connectionHandlerBuilder.connection(connection).frameListener(frameListener).build();
         http2TargetHandler = new Http2TargetHandler(connection, http2ConnectionHandler.encoder());
+        this.encoder = http2ConnectionHandler.encoder();
         if (sslConfig != null) {
             sslHandlerFactory = new SSLHandlerFactory(sslConfig);
         }
@@ -275,6 +278,10 @@ public class HttpClientChannelInitializer extends ChannelInitializer<SocketChann
     public void setHttp2ClientChannel(Http2ClientChannel http2ClientChannel) {
         http2TargetHandler.setHttp2ClientChannel(http2ClientChannel);
         clientFrameListener.setHttp2ClientChannel(http2ClientChannel);
+    }
+
+    public Http2ConnectionEncoder getEncoder() {
+        return encoder;
     }
 
     /**
