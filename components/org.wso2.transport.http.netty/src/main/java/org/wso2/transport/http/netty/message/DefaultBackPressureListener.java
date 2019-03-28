@@ -41,7 +41,7 @@ public class DefaultBackPressureListener implements BackPressureListener {
 
     @Override
     public void onUnWritable() {
-
+        LOG.warn("Semaphore acquired {}", Thread.currentThread().getName());
         if (LOG.isDebugEnabled()) {
             LOG.debug("Semaphore acquired.");
         }
@@ -57,6 +57,7 @@ public class DefaultBackPressureListener implements BackPressureListener {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Semaphore released.");
         }
+        LOG.warn("Semaphore released {}", Thread.currentThread().getName());
         semaphore.release();
     }
 }

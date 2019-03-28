@@ -221,7 +221,9 @@ public class TargetChannel {
         httpOutboundRequest.getMessageStateContext()
                 .setSenderState(new SendingHeaders(messageStateContext, this, httpVersion, chunkConfig,
                                                    httpInboundResponseFuture));
+        LOG.warn("H1 outer thread {}", Thread.currentThread().getName());
         httpOutboundRequest.getHttpContentAsync().setMessageListener((httpContent -> {
+            LOG.warn("H1 thread {}", Thread.currentThread().getName());
             Util.checkUnWritabilityAndNotify(targetHandler.getContext(), backpressureHandler);
             this.channel.eventLoop().execute(() -> {
                 try {

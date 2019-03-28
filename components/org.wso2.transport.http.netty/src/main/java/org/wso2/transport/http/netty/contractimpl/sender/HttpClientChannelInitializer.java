@@ -117,6 +117,8 @@ public class HttpClientChannelInitializer extends ChannelInitializer<SocketChann
     protected void initChannel(SocketChannel socketChannel) throws Exception {
         // Add the generic handlers to the pipeline
         // e.g. SSL handler
+        socketChannel.config().setWriteBufferLowWaterMark(1);
+        socketChannel.config().setWriteBufferHighWaterMark(1);
         ChannelPipeline clientPipeline = socketChannel.pipeline();
         configureProxyServer(clientPipeline);
         HttpClientCodec sourceCodec = new HttpClientCodec();

@@ -147,6 +147,7 @@ public class DefaultHttpClientConnector implements HttpClientConnector {
     }
 
     public HttpResponseFuture send(OutboundMsgHolder outboundMsgHolder, HttpCarbonMessage httpOutboundRequest) {
+        LOG.warn("send Start {}", Thread.currentThread().getName());
         final HttpResponseFuture httpResponseFuture;
 
         Object sourceHandlerObject = httpOutboundRequest.getProperty(Constants.SRC_HANDLER);
@@ -188,6 +189,7 @@ public class DefaultHttpClientConnector implements HttpClientConnector {
                     outboundMsgHolder.setHttp2ClientChannel(activeHttp2ClientChannel);
                    /* activeHttp2ClientChannel.getChannel().eventLoop().execute(
                         () -> activeHttp2ClientChannel.getChannel().write(outboundMsgHolder));*/
+                    LOG.warn("Existing h2 channel {}", Thread.currentThread().getName());
                     new RequestWriteStarter(outboundMsgHolder, activeHttp2ClientChannel).startWritingContent();
                     httpResponseFuture = outboundMsgHolder.getResponseFuture();
                     httpResponseFuture.notifyResponseHandle(new ResponseHandle(outboundMsgHolder));
@@ -244,11 +246,19 @@ public class DefaultHttpClientConnector implements HttpClientConnector {
                                 senderConfiguration.getProxyServerConfiguration() != null) {
                             httpOutboundRequest.setProperty(Constants.IS_PROXY_ENABLED, true);
                         }
+                        LOG.warn("h1 start write {}", Thread.currentThread().getName());
+                        //Simulate delay running the task in I/O thread
+                        /*try {
+                            Thread.sleep(3300);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }*/
                         targetChannel.writeContent(httpOutboundRequest);
                     }
                 }
 
                 private void prepareTargetChannelForHttp2() {
+                    LOG.warn("fresh h2 channel {}", Thread.currentThread().getName());
                     freshHttp2ClientChannel.setSocketIdleTimeout(socketIdleTimeout);
                     connectionManager.getHttp2ConnectionManager().
                         addHttp2ClientChannel(freshHttp2ClientChannel.getChannel().eventLoop(), route,
