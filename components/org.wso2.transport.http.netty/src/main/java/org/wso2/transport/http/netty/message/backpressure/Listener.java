@@ -16,31 +16,29 @@
 *  under the License.
 */
 
-package org.wso2.transport.http.netty.message;
+package org.wso2.transport.http.netty.message.backpressure;
+
+import io.netty.handler.codec.http.HttpContent;
 
 /**
- * Allows listeners to register and get notified.
+ * Get notified upon receiving new http content.
  */
-public interface BackPressureObservable {
+public interface Listener {
 
     /**
-     * Set listener interested for message events.
-     * @param listener for message
+     * Get notified when content are added to the message.
+     * @param httpContent of the message
      */
-    void setListener(BackPressureListener listener);
+    void onAdd(HttpContent httpContent);
 
     /**
-     * Remove listener from the observable.
+     * Get notified when content is removed from the the message.
+     * @param httpContent of the message
      */
-    void removeListener();
+    void onRemove(HttpContent httpContent);
 
     /**
-     * Notify to start throttling.
+     * Since the listener removes readInterest this method resumes it if required.
      */
-    void notifyUnWritable();
-
-    /**
-     * Notify to release throttling.
-     */
-    void notifyWritable();
+    void resumeReadInterest();
 }

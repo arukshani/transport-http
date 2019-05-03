@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.transport.http.netty.message;
+package org.wso2.transport.http.netty.message.backpressure;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
@@ -28,7 +28,7 @@ import static org.wso2.transport.http.netty.contractimpl.common.Util.isLastHttpC
 /**
  * Default implementation of the message Listener.
  */
-public class DefaultListener implements Listener {
+public class Http1InboundContentListener implements Listener {
 
     private static final int MAXIMUM_BYTE_SIZE = 2097152; //Maximum threshold of reading bytes(2MB)
     private AtomicInteger cumulativeByteQuantity = new AtomicInteger(0);
@@ -36,7 +36,7 @@ public class DefaultListener implements Listener {
     private boolean readCompleted = false;
     private boolean first = true;
 
-    public DefaultListener(ChannelHandlerContext ctx) {
+    public Http1InboundContentListener(ChannelHandlerContext ctx) {
         this.ctx = ctx;
     }
 

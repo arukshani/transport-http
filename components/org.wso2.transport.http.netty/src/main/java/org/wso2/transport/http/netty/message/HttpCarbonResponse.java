@@ -20,6 +20,7 @@ package org.wso2.transport.http.netty.message;
 
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.wso2.transport.http.netty.message.backpressure.Listener;
 
 /**
  * Contains information available for http response.

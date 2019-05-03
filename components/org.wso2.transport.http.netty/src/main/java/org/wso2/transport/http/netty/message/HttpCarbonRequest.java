@@ -21,6 +21,7 @@ package org.wso2.transport.http.netty.message;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import org.wso2.transport.http.netty.message.backpressure.Listener;
 
 /**
  * Contains information specific to http request.

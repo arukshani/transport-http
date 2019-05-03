@@ -33,16 +33,17 @@ import org.wso2.transport.http.netty.contractimpl.common.states.Http2MessageStat
 import org.wso2.transport.http.netty.contractimpl.listener.HttpServerChannelInitializer;
 import org.wso2.transport.http.netty.contractimpl.listener.states.http2.EntityBodyReceived;
 import org.wso2.transport.http.netty.contractimpl.listener.states.http2.SendingHeaders;
-import org.wso2.transport.http.netty.message.BackPressureObservable;
-import org.wso2.transport.http.netty.message.DefaultBackPressureListener;
-import org.wso2.transport.http.netty.message.DefaultBackPressureObservable;
-import org.wso2.transport.http.netty.message.DefaultListener;
-import org.wso2.transport.http.netty.message.Http2InboundContentListener;
-import org.wso2.transport.http.netty.message.Http2PassthroughBackPressureListener;
 import org.wso2.transport.http.netty.message.Http2PushPromise;
 import org.wso2.transport.http.netty.message.HttpCarbonMessage;
-import org.wso2.transport.http.netty.message.Listener;
-import org.wso2.transport.http.netty.message.PassthroughBackPressureListener;
+import org.wso2.transport.http.netty.message.backpressure.BackPressureObservable;
+import org.wso2.transport.http.netty.message.backpressure.DefaultBackPressureListener;
+import org.wso2.transport.http.netty.message.backpressure.DefaultBackPressureObservable;
+import org.wso2.transport.http.netty.message.backpressure.Http1InboundContentListener;
+import org.wso2.transport.http.netty.message.backpressure.Http1PassthroughBackPressureListener;
+import org.wso2.transport.http.netty.message.backpressure.Http2InboundContentListener;
+import org.wso2.transport.http.netty.message.backpressure.Http2PassthroughBackPressureListener;
+import org.wso2.transport.http.netty.message.backpressure.Listener;
+import org.wso2.transport.http.netty.message.backpressure.ServerRemoteFlowControlListener;
 
 import java.util.Calendar;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -153,7 +154,10 @@ public class Http2OutboundRespListener implements HttpConnectorListener {
         });
     }
 
-    class ResponseWriter {
+    /**
+     * Responsible for writing HTTP/2 outbound response.
+     */
+    public class ResponseWriter {
         private int streamId;
         private AtomicBoolean streamWritable = new AtomicBoolean(true);
         private final BackPressureObservable backPressureObservable = new DefaultBackPressureObservable();
@@ -178,15 +182,15 @@ public class Http2OutboundRespListener implements HttpConnectorListener {
             return streamId;
         }
 
-        void setStreamWritable(boolean streamWritable) {
+        public void setStreamWritable(boolean streamWritable) {
             this.streamWritable.set(streamWritable);
         }
 
-        boolean isStreamWritable() {
+        public boolean isStreamWritable() {
             return streamWritable.get();
         }
 
-        BackPressureObservable getBackPressureObservable() {
+        public BackPressureObservable getBackPressureObservable() {
             return backPressureObservable;
         }
     }
@@ -210,9 +214,9 @@ public class Http2OutboundRespListener implements HttpConnectorListener {
         if (inboundListener instanceof Http2InboundContentListener) {
             writer.getBackPressureObservable().setListener(
                 new Http2PassthroughBackPressureListener((Http2InboundContentListener) inboundListener));
-        } else if (inboundListener instanceof DefaultListener) {
+        } else if (inboundListener instanceof Http1InboundContentListener) {
             writer.getBackPressureObservable().setListener(
-                new PassthroughBackPressureListener(outboundResponseMsg.getTargetContext()));
+                new Http1PassthroughBackPressureListener(outboundResponseMsg.getTargetContext()));
         }
     }
 

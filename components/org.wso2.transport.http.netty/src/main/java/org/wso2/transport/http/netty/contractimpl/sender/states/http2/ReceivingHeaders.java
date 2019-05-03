@@ -38,11 +38,11 @@ import org.wso2.transport.http.netty.contractimpl.sender.http2.Http2TargetHandle
 import org.wso2.transport.http.netty.contractimpl.sender.http2.OutboundMsgHolder;
 import org.wso2.transport.http.netty.message.Http2DataFrame;
 import org.wso2.transport.http.netty.message.Http2HeadersFrame;
-import org.wso2.transport.http.netty.message.Http2InboundContentListener;
 import org.wso2.transport.http.netty.message.Http2PushPromise;
 import org.wso2.transport.http.netty.message.HttpCarbonMessage;
 import org.wso2.transport.http.netty.message.HttpCarbonResponse;
 import org.wso2.transport.http.netty.message.PooledDataStreamerFactory;
+import org.wso2.transport.http.netty.message.backpressure.Http2InboundContentListener;
 
 import static org.wso2.transport.http.netty.contract.Constants.DIRECTION;
 import static org.wso2.transport.http.netty.contract.Constants.DIRECTION_RESPONSE;

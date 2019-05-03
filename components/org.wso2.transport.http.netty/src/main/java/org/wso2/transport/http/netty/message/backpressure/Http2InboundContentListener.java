@@ -1,4 +1,4 @@
-package org.wso2.transport.http.netty.message;
+package org.wso2.transport.http.netty.message.backpressure;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
@@ -76,7 +76,7 @@ public class Http2InboundContentListener implements Listener {
         appConsumeRequired = false;
     }
 
-    void stopByteConsumption() {
+    public void stopByteConsumption() {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Stream {}. {} stop byte consumption", streamId, inboundType);
         }
@@ -85,7 +85,7 @@ public class Http2InboundContentListener implements Listener {
         }
     }
 
-    void resumeByteConsumption() {
+    public void resumeByteConsumption() {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Stream {}. In thread {}. {} resume byte consumption. Unconsumed bytes: {}",
                       streamId, Thread.currentThread().getName(), inboundType, getUnConsumedBytes());

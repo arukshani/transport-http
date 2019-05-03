@@ -54,16 +54,16 @@ import org.wso2.transport.http.netty.contractimpl.common.ssl.SSLHandlerFactory;
 import org.wso2.transport.http.netty.contractimpl.listener.SourceHandler;
 import org.wso2.transport.http.netty.contractimpl.sender.CertificateValidationHandler;
 import org.wso2.transport.http.netty.contractimpl.sender.OCSPStaplingHandler;
-import org.wso2.transport.http.netty.message.DefaultBackPressureListener;
-import org.wso2.transport.http.netty.message.DefaultListener;
-import org.wso2.transport.http.netty.message.Http2InboundContentListener;
-import org.wso2.transport.http.netty.message.Http2PassthroughBackPressureListener;
 import org.wso2.transport.http.netty.message.HttpCarbonMessage;
 import org.wso2.transport.http.netty.message.HttpCarbonRequest;
 import org.wso2.transport.http.netty.message.HttpCarbonResponse;
-import org.wso2.transport.http.netty.message.Listener;
-import org.wso2.transport.http.netty.message.PassthroughBackPressureListener;
 import org.wso2.transport.http.netty.message.PooledDataStreamerFactory;
+import org.wso2.transport.http.netty.message.backpressure.DefaultBackPressureListener;
+import org.wso2.transport.http.netty.message.backpressure.Http1InboundContentListener;
+import org.wso2.transport.http.netty.message.backpressure.Http1PassthroughBackPressureListener;
+import org.wso2.transport.http.netty.message.backpressure.Http2InboundContentListener;
+import org.wso2.transport.http.netty.message.backpressure.Http2PassthroughBackPressureListener;
+import org.wso2.transport.http.netty.message.backpressure.Listener;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -674,7 +674,7 @@ public class Util {
      * @return HttpCarbonMessage
      */
     public static HttpCarbonMessage createHTTPCarbonMessage(HttpMessage httpMessage, ChannelHandlerContext ctx) {
-        Listener contentListener = new DefaultListener(ctx);
+        Listener contentListener = new Http1InboundContentListener(ctx);
         return new HttpCarbonMessage(httpMessage, contentListener);
     }
 
@@ -705,7 +705,7 @@ public class Util {
             ChannelHandlerContext ctx, SourceHandler sourceHandler) {
 
         HttpCarbonMessage inboundRequestMsg =
-                new HttpCarbonRequest(httpRequestHeaders, new DefaultListener(ctx));
+                new HttpCarbonRequest(httpRequestHeaders, new Http1InboundContentListener(ctx));
         inboundRequestMsg.setProperty(Constants.POOLED_BYTE_BUFFER_FACTORY, new PooledDataStreamerFactory(ctx.alloc()));
 
         inboundRequestMsg.setProperty(Constants.CHNL_HNDLR_CTX, ctx);
@@ -750,7 +750,8 @@ public class Util {
     public static HttpCarbonMessage createInboundRespCarbonMsg(ChannelHandlerContext ctx,
                                                                HttpResponse httpResponseHeaders,
                                                                HttpCarbonMessage outboundRequestMsg) {
-        HttpCarbonMessage inboundResponseMsg = new HttpCarbonResponse(httpResponseHeaders, new DefaultListener(ctx));
+        HttpCarbonMessage inboundResponseMsg = new HttpCarbonResponse(httpResponseHeaders,
+                                                                      new Http1InboundContentListener(ctx));
         inboundResponseMsg.setProperty(Constants.POOLED_BYTE_BUFFER_FACTORY,
                 new PooledDataStreamerFactory(ctx.alloc()));
 
@@ -881,8 +882,8 @@ public class Util {
         if (inboundListener instanceof Http2InboundContentListener) {
             backpressureHandler.getBackPressureObservable().setListener(
                 new Http2PassthroughBackPressureListener((Http2InboundContentListener) inboundListener));
-        } else if (inboundListener instanceof DefaultListener && ctx != null) {
-            backpressureHandler.getBackPressureObservable().setListener(new PassthroughBackPressureListener(ctx));
+        } else if (inboundListener instanceof Http1InboundContentListener && ctx != null) {
+            backpressureHandler.getBackPressureObservable().setListener(new Http1PassthroughBackPressureListener(ctx));
         }
     }
 

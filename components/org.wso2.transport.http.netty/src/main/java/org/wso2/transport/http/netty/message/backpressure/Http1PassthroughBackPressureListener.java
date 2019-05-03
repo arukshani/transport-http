@@ -16,47 +16,43 @@
  *  under the License.
  */
 
-package org.wso2.transport.http.netty.message;
+package org.wso2.transport.http.netty.message.backpressure;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.Semaphore;
-
 /**
- * Default implementation of the {@link BackPressureListener}.
+ * Implementation of the {@link BackPressureListener} for the passthrough scenario.
  */
-public class DefaultBackPressureListener implements BackPressureListener {
-    private static final Logger LOG = LoggerFactory.getLogger(DefaultBackPressureListener.class);
+public class Http1PassthroughBackPressureListener implements BackPressureListener {
+    private static final Logger LOG = LoggerFactory.getLogger(Http1PassthroughBackPressureListener.class);
 
-    private Semaphore semaphore;
+    private Channel inChannel;
 
     /**
-     * Creates the semaphore and sets the source or target channel.
+     * Sets the incoming and outgoing message channels.
+     *
+     * @param inContext  This will be used to block and resume read interest of the incoming channel.
      */
-    public DefaultBackPressureListener() {
-
-        this.semaphore = new Semaphore(0);
+    public Http1PassthroughBackPressureListener(ChannelHandlerContext inContext) {
+        inChannel = inContext.channel();
     }
 
     @Override
     public void onUnWritable() {
-
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Semaphore acquired in thread {} ", Thread.currentThread().getName());
+            LOG.debug("Read disabled for inChannel {}", inChannel.id());
         }
-        try {
-            semaphore.acquire();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        inChannel.config().setAutoRead(false);
     }
 
     @Override
     public void onWritable() {
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Semaphore released in thread {} ", Thread.currentThread().getName());
+            LOG.debug("Read enabled for inChannel {}", inChannel.id());
         }
-        semaphore.release();
+        inChannel.config().setAutoRead(true);
     }
 }

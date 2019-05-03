@@ -43,9 +43,9 @@ import org.wso2.transport.http.netty.contract.Constants;
 import org.wso2.transport.http.netty.contract.ServerConnectorFuture;
 import org.wso2.transport.http.netty.contract.websocket.WebSocketConnectorException;
 import org.wso2.transport.http.netty.contractimpl.websocket.message.DefaultWebSocketHandshaker;
-import org.wso2.transport.http.netty.message.DefaultListener;
 import org.wso2.transport.http.netty.message.HttpCarbonRequest;
 import org.wso2.transport.http.netty.message.PooledDataStreamerFactory;
+import org.wso2.transport.http.netty.message.backpressure.Http1InboundContentListener;
 
 import java.net.InetSocketAddress;
 
@@ -167,7 +167,7 @@ public class WebSocketServerHandshakeHandler extends ChannelInboundHandlerAdapte
 
     private HttpCarbonRequest setupHttpCarbonRequest(HttpRequest httpRequest, ChannelHandlerContext ctx) {
 
-        HttpCarbonRequest sourceReqCmsg = new HttpCarbonRequest(httpRequest, new DefaultListener(ctx));
+        HttpCarbonRequest sourceReqCmsg = new HttpCarbonRequest(httpRequest, new Http1InboundContentListener(ctx));
         sourceReqCmsg.setProperty(Constants.POOLED_BYTE_BUFFER_FACTORY, new PooledDataStreamerFactory(ctx.alloc()));
 
         sourceReqCmsg.setProperty(Constants.CHNL_HNDLR_CTX, ctx);

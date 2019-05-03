@@ -19,6 +19,7 @@
 package org.wso2.transport.http.netty.message;
 
 import io.netty.handler.codec.http.HttpContent;
+import org.wso2.transport.http.netty.message.backpressure.Listener;
 
 /**
  * Default implementation of the message observer.

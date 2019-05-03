@@ -20,8 +20,8 @@ package org.wso2.transport.http.netty.contractimpl.common;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import org.wso2.transport.http.netty.message.BackPressureObservable;
-import org.wso2.transport.http.netty.message.DefaultBackPressureObservable;
+import org.wso2.transport.http.netty.message.backpressure.BackPressureObservable;
+import org.wso2.transport.http.netty.message.backpressure.DefaultBackPressureObservable;
 
 /**
  * Handles backpressure.

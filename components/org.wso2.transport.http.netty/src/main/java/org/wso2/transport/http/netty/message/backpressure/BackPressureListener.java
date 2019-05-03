@@ -16,7 +16,7 @@
  *  under the License.
  */
 
-package org.wso2.transport.http.netty.message;
+package org.wso2.transport.http.netty.message.backpressure;
 
 /**
  * Gets notified to acquire or release during backpressure handling.

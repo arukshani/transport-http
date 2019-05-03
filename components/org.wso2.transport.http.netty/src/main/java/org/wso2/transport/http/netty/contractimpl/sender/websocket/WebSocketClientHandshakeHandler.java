@@ -35,8 +35,8 @@ import org.wso2.transport.http.netty.contractimpl.listener.MessageQueueHandler;
 import org.wso2.transport.http.netty.contractimpl.websocket.DefaultClientHandshakeFuture;
 import org.wso2.transport.http.netty.contractimpl.websocket.DefaultWebSocketConnection;
 import org.wso2.transport.http.netty.contractimpl.websocket.WebSocketInboundFrameHandler;
-import org.wso2.transport.http.netty.message.DefaultListener;
 import org.wso2.transport.http.netty.message.HttpCarbonResponse;
+import org.wso2.transport.http.netty.message.backpressure.Http1InboundContentListener;
 
 /**
  * WebSocket client handshake handler to handle incoming handshake response.
@@ -119,7 +119,7 @@ public class WebSocketClientHandshakeHandler extends ChannelInboundHandlerAdapte
     }
 
     private HttpCarbonResponse setUpCarbonMessage(ChannelHandlerContext ctx, HttpResponse msg) {
-        HttpCarbonResponse carbonResponse = new HttpCarbonResponse(msg, new DefaultListener(ctx));
+        HttpCarbonResponse carbonResponse = new HttpCarbonResponse(msg, new Http1InboundContentListener(ctx));
         carbonResponse.setProperty(Constants.DIRECTION, Constants.DIRECTION_RESPONSE);
         carbonResponse.setProperty(Constants.HTTP_STATUS_CODE, msg.status().code());
         return carbonResponse;

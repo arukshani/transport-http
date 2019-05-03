@@ -16,7 +16,7 @@
  *  under the License.
  */
 
-package org.wso2.transport.http.netty.message;
+package org.wso2.transport.http.netty.message.backpressure;
 
 /**
  * HTTP/2 back pressure listener for passthrough scenario.

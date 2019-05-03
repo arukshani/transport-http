@@ -19,6 +19,7 @@
 package org.wso2.transport.http.netty.message;
 
 import io.netty.handler.codec.http.HttpContent;
+import org.wso2.transport.http.netty.message.backpressure.Listener;
 
 /**
  * Allows listeners to register and get notified.
