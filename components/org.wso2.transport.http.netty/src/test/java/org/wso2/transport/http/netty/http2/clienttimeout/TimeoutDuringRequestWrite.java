@@ -118,6 +118,37 @@ public class TimeoutDuringRequestWrite {
         }
     }
 
+//    @Test
+//    public void testDataWriteAfterTimeout() {
+//        HttpCarbonMessage request = MessageGenerator.generateDelayedRequest(HttpMethod.POST);
+//        byte[] data1 = "Content data part1".getBytes(StandardCharsets.UTF_8);
+//        ByteBuffer byteBuff1 = ByteBuffer.wrap(data1);
+//        request.addHttpContent(new DefaultHttpContent(Unpooled.wrappedBuffer(byteBuff1)));
+//
+//        try {
+//            CountDownLatch latch = new CountDownLatch(1);
+//            DefaultHttpConnectorListener listener = new DefaultHttpConnectorListener(latch);
+//            HttpResponseFuture responseFuture = h2PriorOnClient.send(request);
+//            responseFuture.setHttpConnectorListener(listener);
+//            latch.await(TestUtil.HTTP2_RESPONSE_TIME_OUT, TimeUnit.SECONDS);
+//            Throwable error = listener.getHttpErrorMessage();
+//            AssertJUnit.assertNotNull(error);
+//            assertTrue(error instanceof EndpointTimeOutException,
+//                       "Exception is not an instance of EndpointTimeOutException");
+//            String result = error.getMessage();
+//            assertEquals(result, Constants.IDLE_TIMEOUT_TRIGGERED_WHILE_WRITING_OUTBOUND_REQUEST_BODY,
+//                         "Expected error message not received");
+////            request.setIoException(new IOException(error.getMessage()));
+//            for (int i = 0; i < 5; i++) {
+//                byte[] data2 = "Content data part2".getBytes(StandardCharsets.UTF_8);
+//                ByteBuffer byteBuff2 = ByteBuffer.wrap(data1);
+//                request.addHttpContent(new DefaultHttpContent(Unpooled.wrappedBuffer(byteBuff1)));
+//            }
+//        } catch (Exception e) {
+//            TestUtil.handleException("Exception occurred while running testHttp2ClientTimeout test case", e);
+//        }
+//    }
+
     @AfterClass
     public void cleanUp() {
         h2PriorOnClient.close();
