@@ -60,7 +60,7 @@ public class H2H2Passthrough {
 
     private HttpWsConnectorFactory httpWsConnectorFactory;
     private ServerConnector serverConnector, backEndServer;
-    private static String INPUT = "HTTP/2-HTTP/2";
+    private static final String MSG_PAYLOAD = "HTTP/2-HTTP/2";
 
     @BeforeClass
     public void setup() {
@@ -111,11 +111,11 @@ public class H2H2Passthrough {
     public void testH2H2Passthrough() {
         HttpClientConnector client = getTestHttp2Client(httpWsConnectorFactory, true);
         String response = getResponse(client);
-        assertEquals(response, INPUT);
+        assertEquals(response, MSG_PAYLOAD);
     }
 
     private String getResponse(HttpClientConnector h2Client) {
-        HttpCarbonMessage httpCarbonMessage = MessageGenerator.generateRequest(HttpMethod.POST, INPUT,
+        HttpCarbonMessage httpCarbonMessage = MessageGenerator.generateRequest(HttpMethod.POST, MSG_PAYLOAD,
                                                                                SERVER_CONNECTOR_PORT, "http://");
         HttpCarbonMessage response = new MessageSender(h2Client).sendMessage(httpCarbonMessage);
         assertNotNull(response);

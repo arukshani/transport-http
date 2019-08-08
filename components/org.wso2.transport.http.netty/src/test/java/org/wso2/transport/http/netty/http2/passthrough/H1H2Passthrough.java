@@ -59,7 +59,7 @@ public class H1H2Passthrough {
 
     private HttpWsConnectorFactory httpWsConnectorFactory;
     private ServerConnector serverConnector, backEndServer;
-    private static String INPUT = "HTTP/1-HTTP/2";
+    private static final String MSG_PAYLOAD = "HTTP/1-HTTP/2";
 
     @BeforeClass
     public void setup() {
@@ -112,11 +112,11 @@ public class H1H2Passthrough {
     public void testH1H2Passthrough() {
         HttpClientConnector client = getTestHttp2Client(httpWsConnectorFactory, false);
         String response = getResponse(client);
-        assertEquals(response, INPUT);
+        assertEquals(response, MSG_PAYLOAD);
     }
 
     private String getResponse(HttpClientConnector h1FallBackClient) {
-        HttpCarbonMessage httpCarbonMessage = MessageGenerator.generateRequest(HttpMethod.POST, INPUT,
+        HttpCarbonMessage httpCarbonMessage = MessageGenerator.generateRequest(HttpMethod.POST, MSG_PAYLOAD,
                                                                                SERVER_CONNECTOR_PORT, "http://");
         HttpCarbonMessage response = new MessageSender(h1FallBackClient).sendMessage(httpCarbonMessage);
         assertNotNull(response);
