@@ -34,8 +34,8 @@ import org.wso2.transport.http.netty.contract.ServerConnectorFuture;
 import org.wso2.transport.http.netty.contract.config.ListenerConfiguration;
 import org.wso2.transport.http.netty.contractimpl.DefaultHttpWsConnectorFactory;
 import org.wso2.transport.http.netty.util.TestUtil;
-import org.wso2.transport.http.netty.util.client.http2.nettyclient.Http2NettyClient;
-import org.wso2.transport.http.netty.util.client.http2.nettyclient.HttpResponseHandler;
+import org.wso2.transport.http.netty.util.client.http2.nettyclient.Http2NettyClientWithUpgrade;
+import org.wso2.transport.http.netty.util.client.http2.nettyclient.Http2ResponseHandler;
 
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertNotNull;
@@ -48,7 +48,7 @@ public class ResponseBodyCompressionTestCase {
     private static final Logger LOG = LoggerFactory.getLogger(ResponseBodyCompressionTestCase.class);
     private ServerConnector serverConnector;
     private HttpWsConnectorFactory connectorFactory;
-    private Http2NettyClient h2ClientWithoutDecompressor;
+    private Http2NettyClientWithUpgrade h2ClientWithoutDecompressor;
     private static final String PAYLOAD = "Test Http2 Message";
 
     @BeforeClass
@@ -63,14 +63,14 @@ public class ResponseBodyCompressionTestCase {
         ServerConnectorFuture future = serverConnector.start();
         future.setHttpConnectorListener(new EchoMessageListener());
         future.sync();
-        h2ClientWithoutDecompressor = new Http2NettyClient();
+        h2ClientWithoutDecompressor = new Http2NettyClientWithUpgrade();
     }
 
     @Test
     public void testResponseBodyCompression() throws Exception {
 
         h2ClientWithoutDecompressor.startClient(TestUtil.HTTP_SERVER_PORT, false);
-        HttpResponseHandler responseHandler;
+        Http2ResponseHandler responseHandler;
 
         int streamId = 3;
         responseHandler = h2ClientWithoutDecompressor.sendPostRequest(PAYLOAD, streamId,

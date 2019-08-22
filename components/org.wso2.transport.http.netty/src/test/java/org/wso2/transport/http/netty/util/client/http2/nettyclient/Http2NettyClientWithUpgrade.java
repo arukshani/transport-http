@@ -26,6 +26,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.AsciiString;
@@ -43,12 +44,12 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 /**
  * Test HTTP/2 Client.
  */
-public final class Http2NettyClient {
-    private static final Logger LOG = LoggerFactory.getLogger(Http2NettyClient.class);
+public final class Http2NettyClientWithUpgrade {
+    private static final Logger LOG = LoggerFactory.getLogger(Http2NettyClientWithUpgrade.class);
 
     private static final String HOST = "127.0.0.1";
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
-    private HttpResponseHandler responseHandler;
+    private Http2ResponseHandler responseHandler;
     private Channel channel;
     private int port = 9000;
 
@@ -76,7 +77,15 @@ public final class Http2NettyClient {
 
     }
 
-    public HttpResponseHandler sendPostRequest(String payload, int streamId, String acceptEncoding) {
+    /**
+     * Send post request via an upgraded connection.
+     *
+     * @param payload
+     * @param streamId
+     * @param acceptEncoding
+     * @return
+     */
+    public Http2ResponseHandler sendPostRequest(String payload, int streamId, String acceptEncoding) {
         AsciiString hostName = new AsciiString(HOST + ':' + port);
         LOG.debug("Sending POST request...");
         // Create a simple POST request with a body.
@@ -90,10 +99,16 @@ public final class Http2NettyClient {
         responseHandler.put(streamId, channel.write(request), channel.newPromise());
         flushChannel();
         return responseHandler;
-
     }
 
-    public HttpResponseHandler sendGetRequest(int streamId, String acceptEncoding) {
+    /**
+     * Send get request via an upgraded connection.
+     *
+     * @param streamId
+     * @param acceptEncoding
+     * @return
+     */
+    public Http2ResponseHandler sendGetRequest(int streamId, String acceptEncoding) {
         LOG.debug("Sending GET request...");
         FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/dummy");
         request.headers().add(HttpHeaderNames.HOST, HOST);
@@ -101,6 +116,21 @@ public final class Http2NettyClient {
         if (acceptEncoding != null) {
             request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, acceptEncoding);
         }
+        responseHandler.put(streamId, channel.write(request), channel.newPromise());
+        flushChannel();
+        return responseHandler;
+    }
+
+    public Http2ResponseHandler sendExpect100ContinueRequest(String payload, int streamId) {
+        AsciiString hostName = new AsciiString(HOST + ':' + port);
+        LOG.debug("Sending expect 100 continue request...");
+        // Create a simple POST request with a body.
+        FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, "/dummy",
+                                                             wrappedBuffer(payload.getBytes(CharsetUtil.UTF_8)));
+        request.headers().add(HttpHeaderNames.HOST, hostName);
+        request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), HttpScheme.HTTP.name());
+        request.headers().add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE);
+        request.headers().set("X-Status", "Positive");
         responseHandler.put(streamId, channel.write(request), channel.newPromise());
         flushChannel();
         return responseHandler;

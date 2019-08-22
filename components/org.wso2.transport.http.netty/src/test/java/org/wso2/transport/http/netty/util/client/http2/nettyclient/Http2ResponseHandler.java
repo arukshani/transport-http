@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -38,14 +39,16 @@ import java.util.concurrent.TimeUnit;
 /**
  * Process {@link io.netty.handler.codec.http.FullHttpResponse} translated from HTTP/2 frames.
  */
-public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
-    private static final Logger LOG = LoggerFactory.getLogger(HttpResponseHandler.class);
+public class Http2ResponseHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
+    private static final Logger LOG = LoggerFactory.getLogger(Http2ResponseHandler.class);
 
     private final Map<Integer, Entry<ChannelFuture, ChannelPromise>> streamidPromiseMap;
     private final Map<Integer, FullHttpResponse> responseMap = PlatformDependent.newConcurrentHashMap();
     private final Map<Integer, String> payloadMap = PlatformDependent.newConcurrentHashMap();
+    private final Map<Integer, Boolean> continueStateMap = PlatformDependent.newConcurrentHashMap();
+    private final Map<Integer, Http2CompleteResponse> completeResponseMap = PlatformDependent.newConcurrentHashMap();
 
-    HttpResponseHandler() {
+    Http2ResponseHandler() {
         // Use a concurrent map because we add and iterate from the main thread (just for the purposes of the example),
         // but Netty also does a get on the map when messages are received in a EventLoop thread.
         streamidPromiseMap = PlatformDependent.newConcurrentHashMap();
@@ -58,7 +61,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      * @param writeFuture A future that represent the request write operation
      * @param promise     The promise object that will be used to wait/notify events
      * @return The previous object associated with {@code streamId}
-     * @see HttpResponseHandler#awaitResponses(long, TimeUnit)
+     * @see Http2ResponseHandler#awaitResponses(long, TimeUnit)
      */
     public Entry<ChannelFuture, ChannelPromise> put(int streamId, ChannelFuture writeFuture, ChannelPromise promise) {
         return streamidPromiseMap.put(streamId, new SimpleEntry<ChannelFuture, ChannelPromise>(writeFuture, promise));
@@ -69,7 +72,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      *
      * @param timeout Value of time to wait for each response
      * @param unit    Units associated with {@code timeout}
-     * @see HttpResponseHandler#put(int, io.netty.channel.ChannelFuture, io.netty.channel.ChannelPromise)
+     * @see Http2ResponseHandler#put(int, io.netty.channel.ChannelFuture, io.netty.channel.ChannelPromise)
      */
     void awaitResponses(long timeout, TimeUnit unit) {
         Iterator<Entry<Integer, Entry<ChannelFuture, ChannelPromise>>> itr = streamidPromiseMap.entrySet().iterator();
@@ -98,7 +101,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
         Integer streamId = msg.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
         if (streamId == null) {
-            LOG.warn("HttpResponseHandler unexpected message received: " + msg);
+            LOG.warn("Http2ResponseHandler unexpected message received: " + msg);
             return;
         }
 
@@ -106,9 +109,22 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
         if (entry == null) {
             LOG.warn("Message received for unknown stream id " + streamId);
         } else {
-            payloadMap.put(streamId, parsePayload(msg.content()));
-            responseMap.put(streamId, msg);
-            entry.getValue().setSuccess();
+            if (msg.status().equals(HttpResponseStatus.CONTINUE)) {
+                continueStateMap.put(streamId, true);
+                Http2CompleteResponse completeResponse = new Http2CompleteResponse();
+                completeResponse.setContinueResponse(msg);
+                completeResponseMap.put(streamId, completeResponse);
+            } else if (continueStateMap.get(streamId)) {
+                Http2CompleteResponse completeResponse = completeResponseMap.get(streamId);
+                completeResponse.setFinalResponse(msg);
+                completeResponse.setFinalResponsePayload(parsePayload(msg.content()));
+                continueStateMap.remove(streamId);
+                entry.getValue().setSuccess();
+            } else {
+                payloadMap.put(streamId, parsePayload(msg.content()));
+                responseMap.put(streamId, msg);
+                entry.getValue().setSuccess();
+            }
         }
     }
 
@@ -129,5 +145,9 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
 
         }
         return null;
+    }
+
+    public Http2CompleteResponse getCompleteResponse(int streamId) {
+        return completeResponseMap.get(streamId);
     }
 }

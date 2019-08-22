@@ -53,7 +53,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
 
     private final int maxContentLength;
     private Http2ConnectionHandler connectionHandler;
-    private HttpResponseHandler responseHandler;
+    private Http2ResponseHandler responseHandler;
     private Http2SettingsHandler settingsHandler;
     private boolean addDecompressor;
 
@@ -72,7 +72,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
             builder.frameListener(getFrameListenerWithoutDecompressor(connection));
         }
         connectionHandler = builder.frameLogger(LOGGER).connection(connection).build();
-        responseHandler = new HttpResponseHandler();
+        responseHandler = new Http2ResponseHandler();
         settingsHandler = new Http2SettingsHandler(ch.newPromise());
         configureClearText(ch);
     }
@@ -91,7 +91,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
                 .build());
     }
 
-    HttpResponseHandler responseHandler() {
+    Http2ResponseHandler responseHandler() {
         return responseHandler;
     }
 
